@@ -14,19 +14,8 @@ public class AuthManager {
         auth = FirebaseAuth.getInstance();
     }
 
-    public void registerUser(String email, String password, String username, OnCompleteListener<AuthResult> listener) {
-        auth.createUserWithEmailAndPassword(email, password)
-                .addOnCompleteListener(task -> {
-                    if (task.isSuccessful()) {
-                        // Authentication succeeded
-                        String userId = auth.getCurrentUser().getUid();
-                        Map<String, Object> user = new HashMap<>();
-                        user.put("username", username);
-                        user.put("likes", 0);
-                        user.put("pictures", 0);
-
-                    }
-                });
+    public void registerUser(String email, String password, OnCompleteListener<AuthResult> listener) {
+        auth.createUserWithEmailAndPassword(email, password).addOnCompleteListener(listener);
     }
 
     public void loginUser(String email, String password, OnCompleteListener<AuthResult> listener) {

@@ -1,5 +1,6 @@
 package com.example.orleviprojectjava;
 
+import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
@@ -14,6 +15,9 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
 
     private EditText editTextGmail, editTextPassword;
@@ -21,6 +25,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private FirebaseAuth mAuth;
     AuthManager authManager;
 
+    @SuppressLint("MissingInflatedId")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -32,14 +37,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         editTextPassword = findViewById(R.id.editTextPassword);
         buttonLogin = findViewById(R.id.buttonLogin);
         buttonLogin.setOnClickListener(this);
-        buttonSingUp = findViewById(R.id.buttonSingUp);
+        buttonSingUp = findViewById(R.id.buttonSignUp);
         buttonSingUp.setOnClickListener(this);
     }
 
     @Override
     public void onClick(View v) {
-        if (v == buttonSingUp)// Navigate to RegisterActivity
-            startActivity(new Intent(MainActivity.this, CreateUserActivity.class));
+        if (v == buttonSingUp)
+            registerUser();
         if (v == buttonLogin)
             loginUser();
     }
@@ -67,6 +72,38 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             } else {
                 // If sign-in fails
                 Toast.makeText(MainActivity.this, "Authentication failed.", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void registerUser() {
+        String email = editTextGmail.getText().toString().trim();
+        String password = editTextPassword.getText().toString().trim();
+
+        if (TextUtils.isEmpty(email)) {
+            editTextGmail.setError("Email is required");
+            return;
+        }
+
+        if (TextUtils.isEmpty(password)) {
+            editTextPassword.setError("Password is required");
+            return;
+        }
+        if(password.length()<6){
+            editTextPassword.setError("Password should be at least 6 characters ");
+            return;
+        }
+
+
+        authManager.registerUser(email, password, task -> {
+            if (task.isSuccessful()) {
+                Toast.makeText(this, "Registration successful!", Toast.LENGTH_SHORT).show();
+                Intent intent = new Intent(this, HomeActivity.class);
+                startActivity(intent);
+                finish();
+            } else {
+                String errorMessage = task.getException() != null ? task.getException().getMessage() : "Unknown error";
+                Toast.makeText(this, "Registration failed: " + errorMessage, Toast.LENGTH_SHORT).show();
             }
         });
     }

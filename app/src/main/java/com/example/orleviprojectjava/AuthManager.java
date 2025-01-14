@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class AuthManager {
+
     private FirebaseAuth auth;
 
     public AuthManager() {

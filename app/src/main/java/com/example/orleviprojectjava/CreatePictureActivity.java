@@ -2,6 +2,7 @@ package com.example.orleviprojectjava;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.content.Intent;
 import android.os.Bundle;
 
 
@@ -124,5 +125,10 @@ public class CreatePictureActivity extends AppCompatActivity {
                 runOnUiThread(() -> textView.setText("Error downloading image!"));
             }
         }).start();
+    }
+
+    public void ReturnFC(View view) {
+        Intent intent = new Intent(this, HomeActivity.class);
+        startActivity(intent);
     }
 }

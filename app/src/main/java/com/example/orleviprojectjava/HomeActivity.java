@@ -1,6 +1,7 @@
 package com.example.orleviprojectjava;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatDelegate;
 
 import android.content.Intent;
 import android.os.Bundle;
@@ -21,6 +22,19 @@ public class HomeActivity extends AppCompatActivity {
         Intent intent = new Intent(this, SettingActivity.class);
         startActivity(intent);
         }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (resultCode == RESULT_OK) {
+            String theme = data.getStringExtra("theme");
+            if (theme.equals("dark")) {
+                // אני צריך לעשות דארק מוד
+            } else {
+                // אני צריך לעשות לייט מוד
+            }
+        }
+    }
 
     public void Profile(View view) {
         Intent intent = new Intent(this, ProfileActivity.class);

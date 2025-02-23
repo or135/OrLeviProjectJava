@@ -4,32 +4,31 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Intent;
 import android.os.Bundle;
-
-
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.util.Base64;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
+import java.io.ByteArrayOutputStream;
 
 import com.android.volley.AuthFailureError;
 import com.android.volley.DefaultRetryPolicy;
 import com.android.volley.Request;
-import com.android.volley.Response;
 import com.android.volley.RetryPolicy;
-import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.IOException;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 public class CreatePictureActivity extends AppCompatActivity {
 
@@ -40,6 +39,8 @@ public class CreatePictureActivity extends AppCompatActivity {
     private final String stringAPIKey = "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";
     private String stringOutput = " ";
     private Bitmap bitmapOutputImage;
+    private DatabaseReference databaseRef;
+    private AuthManager authManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -49,6 +50,9 @@ public class CreatePictureActivity extends AppCompatActivity {
         imageView = findViewById(R.id.imageView);
         editText = findViewById(R.id.editText);
         textView = findViewById(R.id.textView);
+
+        databaseRef = FirebaseDatabase.getInstance().getReference();
+        authManager = new AuthManager();
     }
 
     public void buttonGenerateAIImage(View view) {
@@ -125,6 +129,62 @@ public class CreatePictureActivity extends AppCompatActivity {
                 runOnUiThread(() -> textView.setText("Error downloading image!"));
             }
         }).start();
+    }
+
+    public void buttonShareImage(View view) {
+        if (bitmapOutputImage == null) {
+            textView.setText("Please generate and show an image first!");
+            return;
+        }
+
+        String userId = authManager.getCurrentUserId();
+
+        textView.setText("Saving image...");
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        bitmapOutputImage.compress(Bitmap.CompressFormat.JPEG, 50, baos);
+        byte[] imageData = baos.toByteArray();
+        String base64Image = Base64.encodeToString(imageData, Base64.DEFAULT);
+
+        // Create image object
+        String imageId = UUID.randomUUID().toString();
+        Map<String, Object> imageMap = new HashMap<>();
+        imageMap.put("imageId", imageId);
+        imageMap.put("userId", userId);
+        imageMap.put("prompt", editText.getText().toString());
+        imageMap.put("imageData", base64Image);
+        imageMap.put("timestamp", System.currentTimeMillis());
+        imageMap.put("likes", 0);
+
+        databaseRef.child("images")
+                .child(userId)
+                .child(imageId)
+                .setValue(imageMap)
+                .addOnSuccessListener(aVoid -> {
+                    updateUserPhotoCount(userId);
+                    textView.setText("Image saved successfully!");
+                })
+                .addOnFailureListener(e ->
+                        textView.setText("Failed to save image: " + e.getMessage())
+                );
+    }
+
+    private void updateUserPhotoCount(String userId) {
+        databaseRef.child("users")
+                .child(userId)
+                .get()
+                .addOnSuccessListener(dataSnapshot -> {
+                    if (dataSnapshot.exists()) {
+                        UserOC user = dataSnapshot.getValue(UserOC.class);
+                        if (user != null) {
+                            int newPhotoCount = user.getNumberOfPhotos() + 1;
+                            dataSnapshot.getRef().child("numberOfPhotos").setValue(newPhotoCount);
+                        }
+                    }
+                })
+                .addOnFailureListener(e ->
+                        textView.setText("Failed to update photo count: " + e.getMessage())
+                );
     }
 
     public void ReturnFC(View view) {

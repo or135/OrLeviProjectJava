@@ -31,6 +31,7 @@ public class GalleryActivity extends AppCompatActivity {
     private DatabaseReference databaseRef;
     private List<ImageData> imageList;
     private int currentImageIndex = 0;
+    private AuthManager authManager;
 
     private static class ImageData {
         String imageId;
@@ -61,12 +62,13 @@ public class GalleryActivity extends AppCompatActivity {
         uploadComment = findViewById(R.id.UploadComment);
 
         databaseRef = FirebaseDatabase.getInstance().getReference();
+        authManager = new AuthManager();
         imageList = new ArrayList<>();
 
         loadImages();
 
         nextImage.setOnClickListener(v -> showNextImage());
-        uploadComment.setOnClickListener(v -> uploadNewComment());
+        uploadComment.setOnClickListener(v -> checkPremiumAndUploadComment());
     }
 
     private void loadImages() {
@@ -128,6 +130,42 @@ public class GalleryActivity extends AppCompatActivity {
 
         currentImageIndex = (currentImageIndex + 1) % imageList.size();
         showCurrentImage();
+    }
+
+    private void checkPremiumAndUploadComment() {
+        String userId = authManager.getCurrentUserId();
+        if (userId == null) {
+            Toast.makeText(this, "Please login first", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        databaseRef.child("users").child(userId).get().addOnSuccessListener(dataSnapshot -> {
+            if (dataSnapshot.exists()) {
+                // Check if isPremium field exists directly
+                Boolean isPremium = dataSnapshot.child("premium").getValue(Boolean.class);
+                Long photoCount = dataSnapshot.child("numberOfPhotos").getValue(Long.class);
+
+                // User is premium if they have the premium flag or have 3+ photos
+                boolean userIsPremium = (isPremium != null && isPremium) ||
+                        (photoCount != null && photoCount >= 3);
+
+                if (userIsPremium) {
+                    uploadNewComment();
+
+                    // If user has 3+ photos but isPremium flag is not set, update it
+                    if ((isPremium == null || !isPremium) && photoCount != null && photoCount >= 3) {
+                        dataSnapshot.getRef().child("premium").setValue(true);
+                    }
+                } else {
+                    Toast.makeText(GalleryActivity.this,
+                            "You need to upload at least 3 images to become a premium user and comment on photos",
+                            Toast.LENGTH_LONG).show();
+                }
+            }
+        }).addOnFailureListener(e -> {
+            Toast.makeText(GalleryActivity.this, "Failed to check premium status: " + e.getMessage(),
+                    Toast.LENGTH_SHORT).show();
+        });
     }
 
     private void uploadNewComment() {

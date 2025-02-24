@@ -19,6 +19,7 @@ import com.android.volley.Request;
 import com.android.volley.RetryPolicy;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
+import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 
@@ -138,6 +139,10 @@ public class CreatePictureActivity extends AppCompatActivity {
         }
 
         String userId = authManager.getCurrentUserId();
+        if (userId == null) {
+            textView.setText("You must be logged in to share images!");
+            return;
+        }
 
         textView.setText("Saving image...");
 
@@ -175,10 +180,15 @@ public class CreatePictureActivity extends AppCompatActivity {
                 .get()
                 .addOnSuccessListener(dataSnapshot -> {
                     if (dataSnapshot.exists()) {
-                        UserOC user = dataSnapshot.getValue(UserOC.class);
-                        if (user != null) {
-                            int newPhotoCount = user.getNumberOfPhotos() + 1;
-                            dataSnapshot.getRef().child("numberOfPhotos").setValue(newPhotoCount);
+                        Long currentPhotoCount = dataSnapshot.child("numberOfPhotos").getValue(Long.class);
+                        int newPhotoCount = (currentPhotoCount != null) ? currentPhotoCount.intValue() + 1 : 1;
+
+                        dataSnapshot.getRef().child("numberOfPhotos").setValue(newPhotoCount);
+
+                        // Check if this upload makes the user premium (3 or more photos)
+                        if (newPhotoCount >= 3) {
+                            dataSnapshot.getRef().child("premium").setValue(true);
+                            textView.setText("Image saved! You are now a premium user and can comment on photos!");
                         }
                     }
                 })

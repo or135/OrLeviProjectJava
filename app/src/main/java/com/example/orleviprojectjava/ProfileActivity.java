@@ -8,6 +8,7 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.widget.ImageView;
 
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -19,7 +20,8 @@ import com.google.firebase.database.ValueEventListener;
 
 public class ProfileActivity extends AppCompatActivity {
 
-    private TextView UserNameProfile, NumImages, NumLikes;
+    private TextView UserNameProfile, NumImages, NumLikes, premiumStatusText;
+    private ImageView premiumBadge;
     private FirebaseAuth mAuth;
     private DatabaseReference mDatabase;
 
@@ -35,6 +37,9 @@ public class ProfileActivity extends AppCompatActivity {
         NumImages = findViewById(R.id.NumImages);
         NumLikes = findViewById(R.id.NumLikes);
 
+        premiumStatusText = findViewById(R.id.premiumStatusText);
+        premiumBadge = findViewById(R.id.premiumBadge);
+
         loadUserData();
     }
 
@@ -47,12 +52,31 @@ public class ProfileActivity extends AppCompatActivity {
                 @Override
                 public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
                     if (dataSnapshot.exists()) {
+                        Long numPhotos = dataSnapshot.child("numberOfPhotos").getValue(Long.class);
+                        Long numLikes = dataSnapshot.child("numberOfLikes").getValue(Long.class);
+                        Boolean isPremium = dataSnapshot.child("premium").getValue(Boolean.class);
 
-                        Long numImages = dataSnapshot.child("numImages").getValue(Long.class);
-                        Long numLikes = dataSnapshot.child("numLikes").getValue(Long.class);
-
-                        NumImages.setText(String.valueOf(numImages != null ? numImages : 0));
+                        NumImages.setText(String.valueOf(numPhotos != null ? numPhotos : 0));
                         NumLikes.setText(String.valueOf(numLikes != null ? numLikes : 0));
+
+                        // Determine premium status
+                        boolean userIsPremium = (isPremium != null && isPremium) ||
+                                (numPhotos != null && numPhotos >= 3);
+
+                        // Update premium status in UI
+                        if (userIsPremium) {
+                            premiumStatusText.setText("Premium User");
+                            premiumBadge.setVisibility(View.VISIBLE);
+
+                            // Update database if needed
+                            if (isPremium == null || !isPremium) {
+                                dataSnapshot.getRef().child("premium").setValue(true);
+                            }
+                        } else {
+                            int photosNeeded = 3 - (numPhotos != null ? numPhotos.intValue() : 0);
+                            premiumStatusText.setText("Regular User (" + photosNeeded + " more photos for premium)");
+                            premiumBadge.setVisibility(View.GONE);
+                        }
                     }
                 }
 

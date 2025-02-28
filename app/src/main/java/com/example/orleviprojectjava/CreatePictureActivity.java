@@ -37,7 +37,7 @@ public class CreatePictureActivity extends AppCompatActivity {
     private EditText editText;
     private TextView textView;
     private final String stringURL = "https://api.openai.com/v1/images/generations";
-    private final String stringAPIKey = "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";
+    private final String stringAPIKey = "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";
     private String stringOutput = " ";
     private Bitmap bitmapOutputImage;
     private DatabaseReference databaseRef;

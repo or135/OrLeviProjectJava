@@ -134,10 +134,6 @@ public class GalleryActivity extends AppCompatActivity {
 
     private void checkPremiumAndUploadComment() {
         String userId = authManager.getCurrentUserId();
-        if (userId == null) {
-            Toast.makeText(this, "Please login first", Toast.LENGTH_SHORT).show();
-            return;
-        }
 
         databaseRef.child("users").child(userId).get().addOnSuccessListener(dataSnapshot -> {
             if (dataSnapshot.exists()) {

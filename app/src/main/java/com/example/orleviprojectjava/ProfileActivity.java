@@ -56,8 +56,8 @@ public class ProfileActivity extends AppCompatActivity {
                         Long numLikes = dataSnapshot.child("numberOfLikes").getValue(Long.class);
                         Boolean isPremium = dataSnapshot.child("premium").getValue(Boolean.class);
 
-                        NumImages.setText(String.valueOf(numPhotos != null ? numPhotos : 0));
-                        NumLikes.setText(String.valueOf(numLikes != null ? numLikes : 0));
+                        NumImages.setText("NumPhotos:" + String.valueOf(numPhotos != null ? numPhotos : 0));
+                        NumLikes.setText("NumLikes:" + String.valueOf(numLikes != null ? numLikes : 0));
 
                         // Determine premium status
                         boolean userIsPremium = (isPremium != null && isPremium) ||
@@ -74,7 +74,7 @@ public class ProfileActivity extends AppCompatActivity {
                             }
                         } else {
                             int photosNeeded = 3 - (numPhotos != null ? numPhotos.intValue() : 0);
-                            premiumStatusText.setText("Regular User (" + photosNeeded + " more photos for premium)");
+                            premiumStatusText.setText("Regular User              (" + photosNeeded + " more photos for premium)");
                             premiumBadge.setVisibility(View.GONE);
                         }
                     }

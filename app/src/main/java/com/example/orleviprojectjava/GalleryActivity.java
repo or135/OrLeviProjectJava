@@ -33,22 +33,6 @@ public class GalleryActivity extends AppCompatActivity {
     private int currentImageIndex = 0;
     private AuthManager authManager;
 
-    private static class ImageData {
-        String imageId;
-        String userId;
-        String imageBase64;
-        String userEmail;
-        String lastCommentText;
-
-        ImageData(String imageId, String userId, String imageBase64, String userEmail, String lastCommentText) {
-            this.imageId = imageId;
-            this.userId = userId;
-            this.imageBase64 = imageBase64;
-            this.userEmail = userEmail;
-            this.lastCommentText = lastCommentText;
-        }
-    }
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -112,14 +96,14 @@ public class GalleryActivity extends AppCompatActivity {
 
         ImageData currentImage = imageList.get(currentImageIndex);
 
-        byte[] decodedString = Base64.decode(currentImage.imageBase64, Base64.DEFAULT);
+        byte[] decodedString = Base64.decode(currentImage.getImageBase64(), Base64.DEFAULT);
         Bitmap decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length);
         imageViewGallery.setImageBitmap(decodedByte);
 
-        userNameImage.setText(currentImage.userEmail);
+        userNameImage.setText(currentImage.getUserEmail());
 
-        if (currentImage.lastCommentText != null) {
-            lastComment.setText(currentImage.lastCommentText);
+        if (currentImage.getLastCommentText() != null) {
+            lastComment.setText(currentImage.getLastCommentText());
         } else {
             lastComment.setText("No comments yet");
         }
@@ -175,8 +159,8 @@ public class GalleryActivity extends AppCompatActivity {
 
         ImageData currentImage = imageList.get(currentImageIndex);
         databaseRef.child("images")
-                .child(currentImage.userId)
-                .child(currentImage.imageId)
+                .child(currentImage.getUserId())
+                .child(currentImage.getImageId())
                 .child("lastComment")
                 .setValue(comment)
                 .addOnSuccessListener(aVoid -> {

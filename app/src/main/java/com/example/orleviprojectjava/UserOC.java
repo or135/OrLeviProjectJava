@@ -6,6 +6,10 @@ public class UserOC {
     private int numberOfLikes;
     private int numberOfPhotos;
 
+    public UserOC() {
+        // Default constructor required for Firebase
+    }
+
     public UserOC(String userId, String email) {
         this.userId = userId;
         this.email = email;
@@ -17,20 +21,28 @@ public class UserOC {
         return userId;
     }
 
+    public void setUserId(String userId) {
+        this.userId = userId;
+    }
+
     public String getEmail() {
         return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
     }
 
     public int getNumberOfLikes() {
         return numberOfLikes;
     }
 
-    public int getNumberOfPhotos() {
-        return numberOfPhotos;
-    }
-
     public void setNumberOfLikes(int numberOfLikes) {
         this.numberOfLikes = numberOfLikes;
+    }
+
+    public int getNumberOfPhotos() {
+        return numberOfPhotos;
     }
 
     public void setNumberOfPhotos(int numberOfPhotos) {

@@ -1,15 +1,23 @@
 package com.example.orleviprojectjava;
 
 public class UserPremium extends UserOC {
-    private boolean isPremium;
+    private boolean premium;
+
+    public UserPremium() {
+        // Default constructor required for Firebase
+    }
 
     public UserPremium(String userId, String email) {
         super(userId, email);
-        this.isPremium = false;
+        this.premium = false;
     }
 
     public boolean isPremium() {
-        return isPremium;
+        return premium;
+    }
+
+    public void setPremium(boolean premium) {
+        this.premium = premium;
     }
 
     @Override
@@ -20,7 +28,7 @@ public class UserPremium extends UserOC {
 
     private void checkPremiumStatus() {
         if (getNumberOfPhotos() >= 3) {
-            this.isPremium = true;
+            this.premium = true;
         }
     }
 }

@@ -36,7 +36,6 @@ public class ProfileActivity extends AppCompatActivity {
         UserNameProfile = findViewById(R.id.UserNameProfile);
         NumImages = findViewById(R.id.NumImages);
         NumLikes = findViewById(R.id.NumLikes);
-
         premiumStatusText = findViewById(R.id.premiumStatusText);
         premiumBadge = findViewById(R.id.premiumBadge);
 
@@ -72,7 +71,9 @@ public class ProfileActivity extends AppCompatActivity {
                             if (isPremium == null || !isPremium) {
                                 dataSnapshot.getRef().child("premium").setValue(true);
                             }
-                        } else {
+                        }
+                        else
+                        {
                             int photosNeeded = 3 - (numPhotos != null ? numPhotos.intValue() : 0);
                             premiumStatusText.setText("Regular User                                (" + photosNeeded + " more photos for premium)");
                             premiumBadge.setVisibility(View.GONE);

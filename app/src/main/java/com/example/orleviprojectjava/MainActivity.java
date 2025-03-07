@@ -26,6 +26,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
         mAuth = FirebaseAuth.getInstance();
         authManager = new AuthManager();
 
@@ -60,13 +61,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
         authManager.loginUser(email, password, task -> {
             if (task.isSuccessful()) {
-                // Sign-in success
                 FirebaseUser user = mAuth.getCurrentUser();
                 Toast.makeText(MainActivity.this, "Welcome, " + user.getEmail(), Toast.LENGTH_SHORT).show();
-                startActivity(new Intent(MainActivity.this, HomeActivity.class));
+                Intent intent = new Intent(this, HomeActivity.class);
+                startActivity(intent);
                 finish();
             } else {
-                // If sign-in fails
                 Toast.makeText(MainActivity.this, "Authentication failed.", Toast.LENGTH_SHORT).show();
             }
         });

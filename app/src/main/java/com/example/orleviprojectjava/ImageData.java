@@ -7,11 +7,10 @@ public class ImageData {
     private String userEmail;
     private String lastCommentText;
 
-    // Default constructor (required for Firebase)
     public ImageData() {
+        // Default constructor (required for Firebase)
     }
 
-    // Constructor with parameters
     public ImageData(String imageId, String userId, String imageBase64, String userEmail, String lastCommentText) {
         this.imageId = imageId;
         this.userId = userId;

@@ -32,6 +32,7 @@ public class GalleryActivity extends AppCompatActivity {
     private List<ImageData> imageList;
     private int currentImageIndex = 0;
     private AuthManager authManager;
+    private CommentManager commentManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -49,10 +50,20 @@ public class GalleryActivity extends AppCompatActivity {
         authManager = new AuthManager();
         imageList = new ArrayList<>();
 
+        // Initialize CommentManager
+        commentManager = new CommentManager(this, databaseRef, authManager, newComment);
+
         loadImages();
 
         nextImage.setOnClickListener(v -> showNextImage());
-        uploadComment.setOnClickListener(v -> checkPremiumAndUploadComment());
+        uploadComment.setOnClickListener(v -> {
+            if (!imageList.isEmpty()) {
+                ImageData currentImage = imageList.get(currentImageIndex);
+                commentManager.checkPremiumAndUploadComment(currentImage);
+            } else {
+                Toast.makeText(this, "No images available", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     private void loadImages() {
@@ -114,64 +125,6 @@ public class GalleryActivity extends AppCompatActivity {
 
         currentImageIndex = (currentImageIndex + 1) % imageList.size();
         showCurrentImage();
-    }
-
-    private void checkPremiumAndUploadComment() {
-        String userId = authManager.getCurrentUserId();
-
-        databaseRef.child("users").child(userId).get().addOnSuccessListener(dataSnapshot -> {
-            if (dataSnapshot.exists()) {
-                // Check if isPremium field exists directly
-                Boolean isPremium = dataSnapshot.child("premium").getValue(Boolean.class);
-                Long photoCount = dataSnapshot.child("numberOfPhotos").getValue(Long.class);
-
-                // User is premium if they have the premium flag or have 3+ photos
-                boolean userIsPremium = (isPremium != null && isPremium) ||
-                        (photoCount != null && photoCount >= 3);
-
-                if (userIsPremium) {
-                    uploadNewComment();
-
-                    // If user has 3+ photos but isPremium flag is not set, update it
-                    if ((isPremium == null || !isPremium) && photoCount != null && photoCount >= 3) {
-                        dataSnapshot.getRef().child("premium").setValue(true);
-                    }
-                } else {
-                    Toast.makeText(GalleryActivity.this,
-                            "You need to upload at least 3 images to become a premium user and comment on photos",
-                            Toast.LENGTH_LONG).show();
-                }
-            }
-        }).addOnFailureListener(e -> {
-            Toast.makeText(GalleryActivity.this, "Failed to check premium status: " + e.getMessage(),
-                    Toast.LENGTH_SHORT).show();
-        });
-    }
-
-    private void uploadNewComment() {
-        if (imageList.isEmpty()) return;
-
-        String comment = newComment.getText().toString().trim();
-        if (comment.isEmpty()) {
-            Toast.makeText(this, "Please enter a comment", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        ImageData currentImage = imageList.get(currentImageIndex);
-        databaseRef.child("images")
-                .child(currentImage.getUserId())
-                .child(currentImage.getImageId())
-                .child("lastComment")
-                .setValue(comment)
-                .addOnSuccessListener(aVoid -> {
-                    Toast.makeText(GalleryActivity.this, "Comment uploaded successfully",
-                            Toast.LENGTH_SHORT).show();
-                    newComment.setText("");
-                })
-                .addOnFailureListener(e ->
-                        Toast.makeText(GalleryActivity.this, "Failed to upload comment: " + e.getMessage(),
-                                Toast.LENGTH_SHORT).show()
-                );
     }
 
     public void ReturnFG(View view) {

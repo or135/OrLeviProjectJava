@@ -31,7 +31,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-public class CreatePictureActivity extends AppCompatActivity {
+public class CreatePictureActivity extends Activity {
 
     private ImageView imageView;
     private EditText editText;
@@ -195,10 +195,5 @@ public class CreatePictureActivity extends AppCompatActivity {
                 .addOnFailureListener(e ->
                         textView.setText("Failed to update photo count: " + e.getMessage())
                 );
-    }
-
-    public void ReturnFC(View view) {
-        Intent intent = new Intent(this, HomeActivity.class);
-        startActivity(intent);
     }
 }

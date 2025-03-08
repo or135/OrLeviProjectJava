@@ -8,11 +8,9 @@ import android.view.View;
 import android.widget.ImageButton;
 import android.widget.RadioButton;
 
-public class SettingActivity extends AppCompatActivity {
+public class SettingActivity extends Activity {
 
     private RadioButton radioButtonLight, radioButtonDark;
-    private ImageButton ReturnFSetting;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -20,9 +18,6 @@ public class SettingActivity extends AppCompatActivity {
 
         radioButtonLight = findViewById(R.id.radioButtonLight);
         radioButtonDark = findViewById(R.id.radioButtonDark);
-        ReturnFSetting = findViewById(R.id.ReturnFSetting);
-
-        radioButtonLight.setChecked(true);
 
         radioButtonLight.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -45,18 +40,6 @@ public class SettingActivity extends AppCompatActivity {
                 finish();
             }
         });
-
-        ReturnFSetting.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                String theme = radioButtonLight.isChecked() ? "light" : "dark";
-                Intent intent = new Intent();
-                intent.putExtra("theme", theme);
-                setResult(RESULT_OK, intent);
-                finish();
-            }
-        });
-
     }
 
 }

@@ -21,7 +21,7 @@ import com.google.firebase.database.ValueEventListener;
 import java.util.ArrayList;
 import java.util.List;
 
-public class GalleryActivity extends AppCompatActivity {
+public class GalleryActivity extends Activity {
     private ImageView imageViewGallery;
     private TextView userNameImage;
     private TextView lastComment;
@@ -125,10 +125,5 @@ public class GalleryActivity extends AppCompatActivity {
 
         currentImageIndex = (currentImageIndex + 1) % imageList.size();
         showCurrentImage();
-    }
-
-    public void ReturnFG(View view) {
-        Intent intent = new Intent(this, HomeActivity.class);
-        startActivity(intent);
     }
 }

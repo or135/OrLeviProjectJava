@@ -18,7 +18,7 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
-public class ProfileActivity extends AppCompatActivity {
+public class ProfileActivity extends Activity {
 
     private TextView UserNameProfile, NumImages, NumLikes, premiumStatusText;
     private ImageView premiumBadge;
@@ -87,10 +87,5 @@ public class ProfileActivity extends AppCompatActivity {
                 }
             });
         }
-    }
-
-    public void ReturnFP(View view) {
-        Intent intent = new Intent(this, HomeActivity.class);
-        startActivity(intent);
     }
 }

@@ -6,6 +6,9 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.DatabaseReference;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class AuthManager {
     private FirebaseAuth auth;
     private FirebaseDatabase database;
@@ -23,8 +26,15 @@ public class AuthManager {
                     if (task.isSuccessful() && task.getResult() != null) {
                         String userId = task.getResult().getUser().getUid();
 
-                        // Create a UserPremium object
-                        UserPremium newUser = new UserPremium(userId, email);
+                        // Create a user map with the necessary fields
+                        // We're using a simple map instead of UserOC object to avoid serialization issues
+                        // and to make sure all necessary fields are included
+                        Map<String, Object> newUser = new HashMap<>();
+                        newUser.put("userId", userId);
+                        newUser.put("email", email);
+                        newUser.put("numberOfLikes", 0);
+                        newUser.put("numberOfPhotos", 0);
+                        newUser.put("premium", false);
 
                         // Save user data to Firebase Realtime Database
                         usersRef.child(userId).setValue(newUser)
@@ -48,32 +58,6 @@ public class AuthManager {
             return auth.getCurrentUser().getUid();
         }
         return null;
-    }
-
-    public void getUserData(String userId, ResultCallback<UserPremium> callback) {
-        usersRef.child(userId).get().addOnCompleteListener(task -> {
-            if (task.isSuccessful() && task.getResult() != null) {
-                UserPremium user = task.getResult().getValue(UserPremium.class);
-                callback.onResult(user);
-            } else {
-                callback.onResult(null);
-            }
-        });
-    }
-
-    public void updateUserPhotos(String userId, int numberOfPhotos, ResultCallback<Boolean> callback) {
-        usersRef.child(userId).child("numberOfPhotos").setValue(numberOfPhotos)
-                .addOnSuccessListener(aVoid -> {
-                    // Check if user should be premium now
-                    if (numberOfPhotos >= 3) {
-                        usersRef.child(userId).child("premium").setValue(true)
-                                .addOnSuccessListener(aVoid2 -> callback.onResult(true))
-                                .addOnFailureListener(e -> callback.onResult(false));
-                    } else {
-                        callback.onResult(true);
-                    }
-                })
-                .addOnFailureListener(e -> callback.onResult(false));
     }
 
     // Interface for async callbacks

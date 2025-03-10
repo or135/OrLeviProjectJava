@@ -36,6 +36,7 @@ public class HomeActivity extends AppCompatActivity {
         }
     }
 
+
     public void Profile(View view) {
         Intent intent = new Intent(this, ProfileActivity.class);
         startActivity(intent);

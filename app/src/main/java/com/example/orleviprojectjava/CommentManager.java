@@ -66,16 +66,13 @@ public class CommentManager {
         databaseRef.child("images")
                 .child(currentImage.getUserId())
                 .child(currentImage.getImageId())
-                .child("lastComment")
-                .setValue(comment)
+                .child("lastComment").setValue(comment)
+
                 .addOnSuccessListener(aVoid -> {
-                    Toast.makeText(context, "Comment uploaded successfully",
-                            Toast.LENGTH_SHORT).show();
+                    Toast.makeText(context, "Comment uploaded successfully", Toast.LENGTH_SHORT).show();
                     commentEditText.setText("");
                 })
                 .addOnFailureListener(e ->
-                        Toast.makeText(context, "Failed to upload comment: " + e.getMessage(),
-                                Toast.LENGTH_SHORT).show()
-                );
+                        Toast.makeText(context, "Failed to upload comment: " + e.getMessage(), Toast.LENGTH_SHORT).show());
     }
 }

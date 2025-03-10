@@ -81,6 +81,7 @@ public class ProfileActivity extends Activity {
                     }
                 }
 
+
                 @Override
                 public void onCancelled(@NonNull DatabaseError databaseError) {
                     Toast.makeText(ProfileActivity.this, "Failed to load user data.", Toast.LENGTH_SHORT).show();

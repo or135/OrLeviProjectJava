@@ -1,8 +1,5 @@
 package com.example.orleviprojectjava;
 
-import androidx.appcompat.app.AppCompatActivity;
-
-import android.content.Intent;
 import android.os.Bundle;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -12,20 +9,16 @@ import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
 import java.io.ByteArrayOutputStream;
-
 import com.android.volley.AuthFailureError;
 import com.android.volley.DefaultRetryPolicy;
 import com.android.volley.Request;
 import com.android.volley.RetryPolicy;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
-import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
-
 import org.json.JSONException;
 import org.json.JSONObject;
-
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
@@ -37,11 +30,12 @@ public class CreatePictureActivity extends Activity {
     private EditText editText;
     private TextView textView;
     private final String stringURL = "https://api.openai.com/v1/images/generations";
-    private final String stringAPIKey = "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";
+    private final String stringAPIKey = "";
     private String stringOutput = " ";
     private Bitmap bitmapOutputImage;
     private DatabaseReference databaseRef;
     private AuthManager authManager;
+    private final int intTimeOutPeriod = 60000;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,7 +51,7 @@ public class CreatePictureActivity extends Activity {
     }
 
     public void buttonGenerateAIImage(View view) {
-        String stringInputText = editText.getText().toString().trim(); //מסדר את הטקסט
+        String stringInputText = editText.getText().toString().trim();
         textView.setText("In process...");
         if (stringInputText.isEmpty()) {
             textView.setText("Prompt cannot be empty!");
@@ -101,12 +95,8 @@ public class CreatePictureActivity extends Activity {
             }
         };
 
-        int intTimeOutPeriod = 60000; // 60 שניות
-        RetryPolicy retryPolicy = new DefaultRetryPolicy(intTimeOutPeriod,
-                DefaultRetryPolicy.DEFAULT_MAX_RETRIES,
-                DefaultRetryPolicy.DEFAULT_BACKOFF_MULT);
+        RetryPolicy retryPolicy = new DefaultRetryPolicy(intTimeOutPeriod, DefaultRetryPolicy.DEFAULT_MAX_RETRIES, DefaultRetryPolicy.DEFAULT_BACKOFF_MULT);
         jsonObjectRequest.setRetryPolicy(retryPolicy); // מדיניות בקשה
-
         Volley.newRequestQueue(getApplicationContext()).add(jsonObjectRequest); //תור בקשות
     }
 
@@ -119,8 +109,7 @@ public class CreatePictureActivity extends Activity {
                 bitmapOutputImage = BitmapFactory.decodeStream(url.openStream());
 
                 runOnUiThread(() -> {
-                    Bitmap bitmapFinalImage = Bitmap.createScaledBitmap(bitmapOutputImage,
-                            imageView.getWidth(),
+                    Bitmap bitmapFinalImage = Bitmap.createScaledBitmap(bitmapOutputImage, imageView.getWidth(),
                             imageView.getHeight(),
                             true);
                     imageView.setImageBitmap(bitmapFinalImage);
@@ -139,10 +128,6 @@ public class CreatePictureActivity extends Activity {
         }
 
         String userId = authManager.getCurrentUserId();
-        if (userId == null) {
-            textView.setText("You must be logged in to share images!");
-            return;
-        }
 
         textView.setText("Saving image...");
 

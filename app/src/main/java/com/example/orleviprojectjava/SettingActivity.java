@@ -30,6 +30,7 @@ public class SettingActivity extends Activity {
             }
         });
 
+
         radioButtonDark.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {

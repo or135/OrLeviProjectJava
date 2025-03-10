@@ -99,6 +99,7 @@ public class GalleryActivity extends Activity {
         });
     }
 
+
     private void showCurrentImage() {
         if (imageList.isEmpty()) {
             Toast.makeText(this, "No images available", Toast.LENGTH_SHORT).show();

@@ -26,9 +26,6 @@ public class AuthManager {
                     if (task.isSuccessful() && task.getResult() != null) {
                         String userId = task.getResult().getUser().getUid();
 
-                        // Create a user map with the necessary fields
-                        // We're using a simple map instead of UserOC object to avoid serialization issues
-                        // and to make sure all necessary fields are included
                         Map<String, Object> newUser = new HashMap<>();
                         newUser.put("userId", userId);
                         newUser.put("email", email);
@@ -58,10 +55,5 @@ public class AuthManager {
             return auth.getCurrentUser().getUid();
         }
         return null;
-    }
-
-    // Interface for async callbacks
-    public interface ResultCallback<T> {
-        void onResult(T result);
     }
 }

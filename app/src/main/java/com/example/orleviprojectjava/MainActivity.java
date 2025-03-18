@@ -99,8 +99,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 startActivity(intent);
                 finish();
             } else {
-                String errorMessage = task.getException() != null ? task.getException().getMessage() : "Unknown error";
-                Toast.makeText(this, "Registration failed: " + errorMessage, Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Registration failed unknown error" , Toast.LENGTH_SHORT).show();
             }
         });
     }

@@ -6,6 +6,7 @@ public class ImageData {
     private String imageBase64;
     private String userEmail;
     private String lastCommentText;
+    private long likes;
 
     public ImageData() {
         // Default constructor (required for Firebase)
@@ -17,8 +18,8 @@ public class ImageData {
         this.imageBase64 = imageBase64;
         this.userEmail = userEmail;
         this.lastCommentText = lastCommentText;
+        this.likes = 0;
     }
-
 
     public String getImageId() {
         return imageId;
@@ -58,5 +59,13 @@ public class ImageData {
 
     public void setLastCommentText(String lastCommentText) {
         this.lastCommentText = lastCommentText;
+    }
+
+    public long getLikes() {
+        return likes;
+    }
+
+    public void setLikes(long likes) {
+        this.likes = likes;
     }
 }

@@ -8,6 +8,7 @@ import android.os.Bundle;
 import android.util.Base64;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -24,10 +25,11 @@ import java.util.List;
 public class GalleryActivity extends Activity {
     private ImageView imageViewGallery;
     private TextView userNameImage;
-    private TextView lastComment;
+    private TextView lastComment, NumLikesG;
     private EditText newComment;
     private ImageView nextImage;
     private ImageView uploadComment;
+    private ImageButton imageLike;
     private DatabaseReference databaseRef;
     private List<ImageData> imageList;
     private int currentImageIndex = 0;
@@ -45,6 +47,8 @@ public class GalleryActivity extends Activity {
         newComment = findViewById(R.id.NewComment);
         nextImage = findViewById(R.id.NextImage);
         uploadComment = findViewById(R.id.UploadComment);
+        imageLike = findViewById(R.id.imageLike);
+        NumLikesG = findViewById(R.id.NumLikesG);
 
         databaseRef = FirebaseDatabase.getInstance().getReference();
         authManager = new AuthManager();
@@ -64,6 +68,13 @@ public class GalleryActivity extends Activity {
                 Toast.makeText(this, "No images available", Toast.LENGTH_SHORT).show();
             }
         });
+
+        // הוספת מאזין ללחיצה על כפתור הלייק
+        imageLike.setOnClickListener(v -> {
+            if (!imageList.isEmpty()) {
+                addLike();
+            }
+        });
     }
 
     private void loadImages() {
@@ -78,10 +89,15 @@ public class GalleryActivity extends Activity {
                         String userId = imageSnapshot.child("userId").getValue(String.class);
                         String imageBase64 = imageSnapshot.child("imageData").getValue(String.class);
                         String lastCommentText = imageSnapshot.child("lastComment").getValue(String.class);
+                        Long likes = imageSnapshot.child("likes").getValue(Long.class);
 
                         databaseRef.child("users").child(userId).get().addOnSuccessListener(userDataSnapshot -> {
                             String userEmail = userDataSnapshot.child("email").getValue(String.class);
-                            imageList.add(new ImageData(imageId, userId, imageBase64, userEmail, lastCommentText));
+                            ImageData imageData = new ImageData(imageId, userId, imageBase64, userEmail, lastCommentText);
+                            if (likes != null) {
+                                imageData.setLikes(likes);
+                            }
+                            imageList.add(imageData);
 
                             if (imageList.size() == 1) {
                                 showCurrentImage();
@@ -98,7 +114,6 @@ public class GalleryActivity extends Activity {
             }
         });
     }
-
 
     private void showCurrentImage() {
         if (imageList.isEmpty()) {
@@ -119,6 +134,9 @@ public class GalleryActivity extends Activity {
         } else {
             lastComment.setText("No comments yet");
         }
+
+        // הצגת מספר הלייקים
+        NumLikesG.setText(String.valueOf(currentImage.getLikes()));
     }
 
     private void showNextImage() {
@@ -126,5 +144,50 @@ public class GalleryActivity extends Activity {
 
         currentImageIndex = (currentImageIndex + 1) % imageList.size();
         showCurrentImage();
+    }
+
+    // פונקציה פשוטה להוספת לייק
+    private void addLike() {
+        ImageData currentImage = imageList.get(currentImageIndex);
+        String imageId = currentImage.getImageId();
+        String imageOwnerId = currentImage.getUserId();
+
+        // עדכון מספר הלייקים של התמונה
+        DatabaseReference imageRef = databaseRef.child("images").child(imageOwnerId).child(imageId).child("likes");
+        imageRef.get().addOnSuccessListener(dataSnapshot -> {
+            long currentLikes = 0;
+            if (dataSnapshot.exists()) {
+                Long value = dataSnapshot.getValue(Long.class);
+                if (value != null) {
+                    currentLikes = value;
+                }
+            }
+
+            long newLikes = currentLikes + 1;
+            imageRef.setValue(newLikes);
+
+            // עדכון ממשק המשתמש
+            currentImage.setLikes(newLikes);
+            NumLikesG.setText(String.valueOf(newLikes));
+
+            // עדכון מספר הלייקים של בעל התמונה
+            updateUserLikes(imageOwnerId);
+        });
+    }
+
+    // עדכון סך הלייקים של המשתמש
+    private void updateUserLikes(String userId) {
+        DatabaseReference userRef = databaseRef.child("users").child(userId).child("numberOfLikes");
+        userRef.get().addOnSuccessListener(dataSnapshot -> {
+            long currentLikes = 0;
+            if (dataSnapshot.exists()) {
+                Long value = dataSnapshot.getValue(Long.class);
+                if (value != null) {
+                    currentLikes = value;
+                }
+            }
+
+            userRef.setValue(currentLikes + 1);
+        });
     }
 }

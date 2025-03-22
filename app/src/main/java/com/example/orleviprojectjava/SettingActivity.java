@@ -1,14 +1,11 @@
 package com.example.orleviprojectjava;
 
-import androidx.appcompat.app.AppCompatActivity;
-
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
-import android.widget.ImageButton;
 import android.widget.RadioButton;
 
-public class SettingActivity extends Activity {
+public class SettingActivity extends ReturnActivity {
 
     private RadioButton radioButtonLight, radioButtonDark;
     @Override
@@ -29,7 +26,6 @@ public class SettingActivity extends Activity {
                 finish();
             }
         });
-
 
         radioButtonDark.setOnClickListener(new View.OnClickListener() {
             @Override

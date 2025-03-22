@@ -27,32 +27,30 @@ public class CommentManager {
 
         String userId = authManager.getCurrentUserId();
 
+        // dataSnapshot מכיל את המידע של המשתמש המבוקש
         databaseRef.child("users").child(userId).get().addOnSuccessListener(dataSnapshot -> {
             if (dataSnapshot.exists()) {
-                // Check if isPremium field exists directly
+                // לוקח את הערכים בשביל לבדוק אם פרימיום
                 Boolean isPremium = dataSnapshot.child("premium").getValue(Boolean.class);
                 Long photoCount = dataSnapshot.child("numberOfPhotos").getValue(Long.class);
 
-                // User is premium if they have the premium flag or have 3+ photos
-                boolean userIsPremium = (isPremium != null && isPremium) ||
-                        (photoCount != null && photoCount >= 3);
+                // בודק
+                boolean userIsPremium = (isPremium != null && isPremium) || (photoCount != null && photoCount >= 3);
 
                 if (userIsPremium) {
-                    uploadNewComment(currentImage);
+                    uploadNewComment(currentImage); //קורא לפעולה שבאמת מעלה את התגובה
 
-                    // If user has 3+ photos but isPremium flag is not set, update it
+                    // בודק אם צריך לעדכן את הערך פרימיום
                     if ((isPremium == null || !isPremium) && photoCount != null && photoCount >= 3) {
                         dataSnapshot.getRef().child("premium").setValue(true);
                     }
-                } else {
-                    Toast.makeText(context,
-                            "You need to upload at least 3 images to become a premium user and comment on photos",
-                            Toast.LENGTH_LONG).show();
+                }
+                else {
+                    Toast.makeText(context, "You need to upload at least 3 images to become a premium user and comment on photos", Toast.LENGTH_LONG).show();
                 }
             }
         }).addOnFailureListener(e -> {
-            Toast.makeText(context, "Failed to check premium status: " + e.getMessage(),
-                    Toast.LENGTH_SHORT).show();
+            Toast.makeText(context, "Failed to check premium status: " + e.getMessage(), Toast.LENGTH_SHORT).show();
         });
     }
 
@@ -63,16 +61,13 @@ public class CommentManager {
             return;
         }
 
-        databaseRef.child("images")
-                .child(currentImage.getUserId())
-                .child(currentImage.getImageId())
-                .child("lastComment").setValue(comment)
+        databaseRef.child("images").child(currentImage.getUserId()).child(currentImage.getImageId()).child("lastComment").setValue(comment)
 
-                .addOnSuccessListener(aVoid -> {
+                .addOnSuccessListener(aVoid -> { //aVoid פשוט מתחיל את הפולה לא מכיל מידע
                     Toast.makeText(context, "Comment uploaded successfully", Toast.LENGTH_SHORT).show();
                     commentEditText.setText("");
                 })
-                .addOnFailureListener(e ->
+                .addOnFailureListener(e -> // e מתחיל את הפעולה ומכיל את המידע של השגיאה
                         Toast.makeText(context, "Failed to upload comment: " + e.getMessage(), Toast.LENGTH_SHORT).show());
     }
 }

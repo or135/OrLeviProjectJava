@@ -1,9 +1,7 @@
 package com.example.orleviprojectjava;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
 
-import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.TextView;
@@ -18,7 +16,7 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
-public class ProfileActivity extends Activity {
+public class ProfileActivity extends ReturnActivity {
 
     private TextView UserNameProfile, NumImages, NumLikes, premiumStatusText;
     private ImageView premiumBadge;
@@ -55,32 +53,25 @@ public class ProfileActivity extends Activity {
                         Long numLikes = dataSnapshot.child("numberOfLikes").getValue(Long.class);
                         Boolean isPremium = dataSnapshot.child("premium").getValue(Boolean.class);
 
-                        NumImages.setText("NumPhotos: " + String.valueOf(numPhotos != null ? numPhotos : 0));
-                        NumLikes.setText("NumLikes: " + String.valueOf(numLikes != null ? numLikes : 0));
+                        NumImages.setText("Photos: " + String.valueOf(numPhotos));
+                        NumLikes.setText("Likes: " + String.valueOf(numLikes));
 
-                        // Determine premium status
-                        boolean userIsPremium = (isPremium != null && isPremium) ||
-                                (numPhotos != null && numPhotos >= 3);
+                        boolean userIsPremium = (isPremium != null && isPremium) || (numPhotos != null && numPhotos >= 3);
 
-                        // Update premium status in UI
                         if (userIsPremium) {
                             premiumStatusText.setText("Premium User");
                             premiumBadge.setVisibility(View.VISIBLE);
 
-                            // Update database if needed
-                            if (isPremium == null || !isPremium) {
-                                dataSnapshot.getRef().child("premium").setValue(true);
-                            }
+                            if (isPremium == null || !isPremium) {dataSnapshot.getRef().child("premium").setValue(true);}
                         }
                         else
                         {
-                            int photosNeeded = 3 - (numPhotos != null ? numPhotos.intValue() : 0);
+                            int photosNeeded = 3 - (numPhotos.intValue());
                             premiumStatusText.setText("Regular User                                (" + photosNeeded + " more photos for premium)");
                             premiumBadge.setVisibility(View.GONE);
                         }
                     }
                 }
-
 
                 @Override
                 public void onCancelled(@NonNull DatabaseError databaseError) {

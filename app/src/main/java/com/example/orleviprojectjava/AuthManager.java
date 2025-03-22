@@ -14,33 +14,27 @@ public class AuthManager {
     private FirebaseDatabase database;
     private DatabaseReference usersRef;
 
-    public AuthManager() {
+    public AuthManager() { // מאתחל ומגדיר הפניה לענף
         auth = FirebaseAuth.getInstance();
         database = FirebaseDatabase.getInstance();
         usersRef = database.getReference("users");
     }
 
+    //listener – אובייקט שאחראי לטפל בתוצאה של הפעולה (למשל, כדי לדעת אם ההרשמה הצליחה או נכשלה)
     public void registerUser(String email, String password, OnCompleteListener<AuthResult> listener) {
         auth.createUserWithEmailAndPassword(email, password)
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful() && task.getResult() != null) {
                         String userId = task.getResult().getUser().getUid();
 
-                        Map<String, Object> newUser = new HashMap<>();
+                        Map<String, Object> newUser = new HashMap<>(); //newUser מגירה של
                         newUser.put("userId", userId);
                         newUser.put("email", email);
                         newUser.put("numberOfLikes", 0);
                         newUser.put("numberOfPhotos", 0);
                         newUser.put("premium", false);
 
-                        // Save user data to Firebase Realtime Database
-                        usersRef.child(userId).setValue(newUser)
-                                .addOnSuccessListener(aVoid -> {
-                                    // Data saved successfully
-                                })
-                                .addOnFailureListener(e -> {
-                                    // Handle any errors
-                                });
+                        usersRef.child(userId).setValue(newUser);
                     }
                     listener.onComplete(task);
                 });

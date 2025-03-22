@@ -5,6 +5,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.util.Base64;
 import android.view.View;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -24,18 +25,19 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-public class CreatePictureActivity extends Activity {
+public class CreatePictureActivity extends ReturnActivity implements View.OnClickListener {
 
     private ImageView imageView;
     private EditText editText;
     private TextView textView;
     private final String stringURL = "https://api.openai.com/v1/images/generations";
-    private final String stringAPIKey = "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";
+    private final String stringAPIKey = "";
     private String stringOutput = " ";
     private Bitmap bitmapOutputImage;
     private DatabaseReference databaseRef;
     private AuthManager authManager;
     private final int intTimeOutPeriod = 60000;
+    private Button buttonShare;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,39 +47,41 @@ public class CreatePictureActivity extends Activity {
         imageView = findViewById(R.id.imageView);
         editText = findViewById(R.id.editText);
         textView = findViewById(R.id.textView);
+        buttonShare = findViewById(R.id.buttonShare);
 
         databaseRef = FirebaseDatabase.getInstance().getReference();
         authManager = new AuthManager();
+
+        buttonShare.setOnClickListener(this);
+    }
+
+    @Override
+    public void onClick(View v) {
+        CustomDialog customDialog = new CustomDialog(this, v);
+        customDialog.show();
     }
 
     public void buttonGenerateAIImage(View view) {
         String stringInputText = editText.getText().toString().trim();
         textView.setText("In process...");
         if (stringInputText.isEmpty()) {
-            textView.setText("Prompt cannot be empty!");
-            return;
+            textView.setText("Prompt cannot be empty!"); return;
         }
 
-        JSONObject jsonObject = new JSONObject(); //מסדר את הבקשה לAI
+        // JSON פורמט טקסט פשוט לתקשורת בין אפליקציות
+        JSONObject jsonObject = new JSONObject(); //JSONObject פורמט להעברת מידע המבוקש על ידי OpenAI
         try {
             jsonObject.put("prompt", stringInputText);
             jsonObject.put("n", 1);
             jsonObject.put("size", "1024x1024");
         } catch (JSONException e) {
-            textView.setText("Error creating JSON body");
-            return;
+            textView.setText("Error creating JSON body"); return;
         }
 
-
-        JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(Request.Method.POST, //הבקשה עצמה
-                stringURL,
-                jsonObject,
+        JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(Request.Method.POST, stringURL, jsonObject, //הבקשה עצמה לשרת //// סוג הבקשה (POST)
                 response -> {
                     try {
-                        stringOutput = response
-                                .getJSONArray("data")
-                                .getJSONObject(0)
-                                .getString("url");
+                        stringOutput = response.getJSONArray("data").getJSONObject(0).getString("url"); // הוצאת כתובת ה-URL של התמונה
                         textView.setText("Image URL ready");
                     } catch (JSONException e) {
                         textView.setText("Error parsing response");
@@ -86,11 +90,11 @@ public class CreatePictureActivity extends Activity {
                 error -> {
                     textView.setText("API request failed: " + error.getMessage());
                 }) {
-            @Override
-            public Map<String, String> getHeaders() throws AuthFailureError {
+            @Override //getHeaders() מאפשר להוסיף כותרות לבקשת HTTP
+            public Map<String, String> getHeaders() throws AuthFailureError { // כתובת Headers שנחוצה לשרת בעלת מידע נוסף
                 Map<String, String> headers = new HashMap<>();
-                headers.put("Authorization", "Bearer " + stringAPIKey);
-                headers.put("Content-Type", "application/json");
+                headers.put("Authorization", "Bearer " + stringAPIKey); // הכנסת מפתח בשביל שהשרת יראה שאנחנו מורשים
+                headers.put("Content-Type", "application/json"); //סוג הנתונים שאני שולח לשרת
                 return headers;
             }
         };
@@ -101,17 +105,16 @@ public class CreatePictureActivity extends Activity {
     }
 
     public void buttonShowImage(View view) {
+        buttonShare.setClickable(true);
         textView.setText("Downloading image...");
 
-        new Thread(() -> {
-            try {
-                URL url = new URL(stringOutput);
-                bitmapOutputImage = BitmapFactory.decodeStream(url.openStream());
+        new Thread(() -> { //Thread מאפשר לאפליקציה להריץ כמה משימות במקביל בלי שהכול ייתקע
+            try { //השתמשתי בזה כי זה כבד להוריד תמונה ואני לא רוצה שהאפליקציה תקרוס
+                URL url = new URL(stringOutput); //הURL לתמונה
+                bitmapOutputImage = BitmapFactory.decodeStream(url.openStream()); //מוריד את התמונה ומעביר לפורמט מתאים
 
-                runOnUiThread(() -> {
-                    Bitmap bitmapFinalImage = Bitmap.createScaledBitmap(bitmapOutputImage, imageView.getWidth(),
-                            imageView.getHeight(),
-                            true);
+                runOnUiThread(() -> { // מה שמוחזר לThread הראשי
+                    Bitmap bitmapFinalImage = Bitmap.createScaledBitmap(bitmapOutputImage, imageView.getWidth(), imageView.getHeight(), true);
                     imageView.setImageBitmap(bitmapFinalImage);
                     textView.setText("Image generation successful!");
                 });
@@ -121,24 +124,23 @@ public class CreatePictureActivity extends Activity {
         }).start();
     }
 
-    public void buttonShareImage(View view) {
+    public void buttonShareImage(View contextView) {
+        buttonShare.setClickable(false);
         if (bitmapOutputImage == null) {
-            textView.setText("Please generate and show an image first!");
-            return;
+            textView.setText("Please generate and show an image first!"); return;
         }
 
         String userId = authManager.getCurrentUserId();
 
         textView.setText("Saving image...");
 
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        ByteArrayOutputStream baos = new ByteArrayOutputStream(); //ממיר את התמונה לפורמט שהפיירבייס יכול לשמור
         bitmapOutputImage.compress(Bitmap.CompressFormat.JPEG, 50, baos);
         byte[] imageData = baos.toByteArray();
         String base64Image = Base64.encodeToString(imageData, Base64.DEFAULT);
 
-        // Create image object
         String imageId = UUID.randomUUID().toString();
-        Map<String, Object> imageMap = new HashMap<>();
+        Map<String, Object> imageMap = new HashMap<>(); // יוצר את האובייקט של התמונה
         imageMap.put("imageId", imageId);
         imageMap.put("userId", userId);
         imageMap.put("prompt", editText.getText().toString());
@@ -146,10 +148,7 @@ public class CreatePictureActivity extends Activity {
         imageMap.put("timestamp", System.currentTimeMillis());
         imageMap.put("likes", 0);
 
-        databaseRef.child("images")
-                .child(userId)
-                .child(imageId)
-                .setValue(imageMap)
+        databaseRef.child("images").child(userId).child(imageId).setValue(imageMap)
                 .addOnSuccessListener(aVoid -> {
                     updateUserPhotoCount(userId);
                     textView.setText("Image saved successfully!");
@@ -160,23 +159,19 @@ public class CreatePictureActivity extends Activity {
     }
 
     private void updateUserPhotoCount(String userId) {
-        databaseRef.child("users")
-                .child(userId)
-                .get()
+        databaseRef.child("users").child(userId).get()
                 .addOnSuccessListener(dataSnapshot -> {
                     if (dataSnapshot.exists()) {
                         Long currentPhotoCount = dataSnapshot.child("numberOfPhotos").getValue(Long.class);
-                        int newPhotoCount = (currentPhotoCount != null) ? currentPhotoCount.intValue() + 1 : 1;
-
+                        int newPhotoCount = 0;
+                        if (currentPhotoCount != null) { newPhotoCount =  currentPhotoCount.intValue() + 1;}
                         dataSnapshot.getRef().child("numberOfPhotos").setValue(newPhotoCount);
 
-                        // Check if this upload makes the user premium (3 or more photos)
                         if (newPhotoCount >= 3) {
                             dataSnapshot.getRef().child("premium").setValue(true);
                             textView.setText("Image saved! You are now a premium user and can comment on photos!");
                         }
-                    }
-                })
+                    }})
                 .addOnFailureListener(e ->
                         textView.setText("Failed to update photo count: " + e.getMessage())
                 );

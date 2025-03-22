@@ -83,7 +83,6 @@
         android:layout_height="wrap_content"
         android:text="Share"
         android:clickable="true"
-        android:onClick="buttonShareImage"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"

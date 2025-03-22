@@ -38,7 +38,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         buttonSingUp.setOnClickListener(this);
     }
 
-
     @Override
     public void onClick(View v) {
         if (v == buttonSingUp)

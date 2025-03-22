@@ -1,12 +1,9 @@
 package com.example.orleviprojectjava;
 
-import androidx.appcompat.app.AppCompatActivity;
-import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.Bundle;
 import android.util.Base64;
-import android.view.View;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ImageView;
@@ -22,13 +19,10 @@ import com.google.firebase.database.ValueEventListener;
 import java.util.ArrayList;
 import java.util.List;
 
-public class GalleryActivity extends Activity {
-    private ImageView imageViewGallery;
-    private TextView userNameImage;
-    private TextView lastComment, NumLikesG;
+public class GalleryActivity extends ReturnActivity {
+    private ImageView imageViewGallery, nextImage, uploadComment;
+    private TextView userNameImage, lastComment, NumLikesG;
     private EditText newComment;
-    private ImageView nextImage;
-    private ImageView uploadComment;
     private ImageButton imageLike;
     private DatabaseReference databaseRef;
     private List<ImageData> imageList;
@@ -54,12 +48,12 @@ public class GalleryActivity extends Activity {
         authManager = new AuthManager();
         imageList = new ArrayList<>();
 
-        // Initialize CommentManager
         commentManager = new CommentManager(this, databaseRef, authManager, newComment);
 
         loadImages();
 
         nextImage.setOnClickListener(v -> showNextImage());
+
         uploadComment.setOnClickListener(v -> {
             if (!imageList.isEmpty()) {
                 ImageData currentImage = imageList.get(currentImageIndex);
@@ -69,10 +63,11 @@ public class GalleryActivity extends Activity {
             }
         });
 
-        // הוספת מאזין ללחיצה על כפתור הלייק
         imageLike.setOnClickListener(v -> {
             if (!imageList.isEmpty()) {
                 addLike();
+            } else {
+                Toast.makeText(this, "No images available", Toast.LENGTH_SHORT).show();
             }
         });
     }
@@ -94,14 +89,12 @@ public class GalleryActivity extends Activity {
                         databaseRef.child("users").child(userId).get().addOnSuccessListener(userDataSnapshot -> {
                             String userEmail = userDataSnapshot.child("email").getValue(String.class);
                             ImageData imageData = new ImageData(imageId, userId, imageBase64, userEmail, lastCommentText);
-                            if (likes != null) {
-                                imageData.setLikes(likes);
-                            }
+
+                            if (likes != null) {imageData.setLikes(likes);}
+
                             imageList.add(imageData);
 
-                            if (imageList.size() == 1) {
-                                showCurrentImage();
-                            }
+                            if (imageList.size() == 1) {showCurrentImage();}
                         });
                     }
                 }
@@ -109,33 +102,27 @@ public class GalleryActivity extends Activity {
 
             @Override
             public void onCancelled(DatabaseError databaseError) {
-                Toast.makeText(GalleryActivity.this, "Failed to load images: " + databaseError.getMessage(),
-                        Toast.LENGTH_SHORT).show();
+                Toast.makeText(GalleryActivity.this, "Failed to load images: " + databaseError.getMessage(), Toast.LENGTH_SHORT).show();
             }
         });
     }
 
     private void showCurrentImage() {
         if (imageList.isEmpty()) {
-            Toast.makeText(this, "No images available", Toast.LENGTH_SHORT).show();
-            return;
+            Toast.makeText(this, "No images available", Toast.LENGTH_SHORT).show();return;
         }
 
         ImageData currentImage = imageList.get(currentImageIndex);
 
-        byte[] decodedString = Base64.decode(currentImage.getImageBase64(), Base64.DEFAULT);
+        byte[] decodedString = Base64.decode(currentImage.getImageBase64(), Base64.DEFAULT); // המרת התמונה מטקסט לתמונה
         Bitmap decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length);
         imageViewGallery.setImageBitmap(decodedByte);
 
         userNameImage.setText(currentImage.getUserEmail());
 
-        if (currentImage.getLastCommentText() != null) {
-            lastComment.setText(currentImage.getLastCommentText());
-        } else {
-            lastComment.setText("No comments yet");
-        }
+        if (currentImage.getLastCommentText() != null) {lastComment.setText(currentImage.getLastCommentText());}
+        else {lastComment.setText("No comments yet");}
 
-        // הצגת מספר הלייקים
         NumLikesG.setText(String.valueOf(currentImage.getLikes()));
     }
 
@@ -158,11 +145,9 @@ public class GalleryActivity extends Activity {
             long currentLikes = 0;
             if (dataSnapshot.exists()) {
                 Long value = dataSnapshot.getValue(Long.class);
-                if (value != null) {
-                    currentLikes = value;
-                }
-            }
 
+                if (value != null) {currentLikes = value;}
+            }
             long newLikes = currentLikes + 1;
             imageRef.setValue(newLikes);
 
@@ -182,9 +167,8 @@ public class GalleryActivity extends Activity {
             long currentLikes = 0;
             if (dataSnapshot.exists()) {
                 Long value = dataSnapshot.getValue(Long.class);
-                if (value != null) {
-                    currentLikes = value;
-                }
+
+                if (value != null) {currentLikes = value;}
             }
 
             userRef.setValue(currentLikes + 1);

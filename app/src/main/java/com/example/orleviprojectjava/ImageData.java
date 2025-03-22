@@ -1,11 +1,7 @@
 package com.example.orleviprojectjava;
 
 public class ImageData {
-    private String imageId;
-    private String userId;
-    private String imageBase64;
-    private String userEmail;
-    private String lastCommentText;
+    private String imageId, userId, imageBase64, userEmail,lastCommentText;
     private long likes;
 
     public ImageData() {

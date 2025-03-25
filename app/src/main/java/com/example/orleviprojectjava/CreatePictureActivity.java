@@ -31,12 +31,12 @@ public class CreatePictureActivity extends ReturnActivity implements View.OnClic
     private EditText editText;
     private TextView textView;
     private final String stringURL = "https://api.openai.com/v1/images/generations";
-    private final String stringAPIKey = "";
+    private final String stringAPIKey = "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";
     private String stringOutput = " ";
     private Bitmap bitmapOutputImage;
     private DatabaseReference databaseRef;
     private AuthManager authManager;
-    private final int intTimeOutPeriod = 60000;
+    private final int INT_TIME_OUT_PERIOD = 60000;
     private Button buttonShare;
 
     @Override
@@ -69,7 +69,7 @@ public class CreatePictureActivity extends ReturnActivity implements View.OnClic
         }
 
         // JSON פורמט טקסט פשוט לתקשורת בין אפליקציות
-        JSONObject jsonObject = new JSONObject(); //JSONObject פורמט להעברת מידע המבוקש על ידי OpenAI
+        JSONObject jsonObject = new JSONObject(); // פורמט  OpenAI דרוש
         try {
             jsonObject.put("prompt", stringInputText);
             jsonObject.put("n", 1);
@@ -78,7 +78,7 @@ public class CreatePictureActivity extends ReturnActivity implements View.OnClic
             textView.setText("Error creating JSON body"); return;
         }
 
-        JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(Request.Method.POST, stringURL, jsonObject, //הבקשה עצמה לשרת //// סוג הבקשה (POST)
+        JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(Request.Method.POST, stringURL, jsonObject, //הבקשה עצמה לשרת // סוג הבקשה (POST)
                 response -> {
                     try {
                         stringOutput = response.getJSONArray("data").getJSONObject(0).getString("url"); // הוצאת כתובת ה-URL של התמונה
@@ -90,16 +90,16 @@ public class CreatePictureActivity extends ReturnActivity implements View.OnClic
                 error -> {
                     textView.setText("API request failed: " + error.getMessage());
                 }) {
-            @Override //getHeaders() מאפשר להוסיף כותרות לבקשת HTTP
-            public Map<String, String> getHeaders() throws AuthFailureError { // כתובת Headers שנחוצה לשרת בעלת מידע נוסף
+            @Override //getHeaders() מוסיף כותרות לבקשת HTTP // עוטף את המידע
+            public Map<String, String> getHeaders() throws AuthFailureError {
                 Map<String, String> headers = new HashMap<>();
-                headers.put("Authorization", "Bearer " + stringAPIKey); // הכנסת מפתח בשביל שהשרת יראה שאנחנו מורשים
+                headers.put("Authorization", "Bearer " + stringAPIKey);
                 headers.put("Content-Type", "application/json"); //סוג הנתונים שאני שולח לשרת
                 return headers;
             }
         };
 
-        RetryPolicy retryPolicy = new DefaultRetryPolicy(intTimeOutPeriod, DefaultRetryPolicy.DEFAULT_MAX_RETRIES, DefaultRetryPolicy.DEFAULT_BACKOFF_MULT);
+        RetryPolicy retryPolicy = new DefaultRetryPolicy(INT_TIME_OUT_PERIOD, DefaultRetryPolicy.DEFAULT_MAX_RETRIES, DefaultRetryPolicy.DEFAULT_BACKOFF_MULT);
         jsonObjectRequest.setRetryPolicy(retryPolicy); // מדיניות בקשה
         Volley.newRequestQueue(getApplicationContext()).add(jsonObjectRequest); //תור בקשות
     }
@@ -108,9 +108,9 @@ public class CreatePictureActivity extends ReturnActivity implements View.OnClic
         buttonShare.setClickable(true);
         textView.setText("Downloading image...");
 
-        new Thread(() -> { //Thread מאפשר לאפליקציה להריץ כמה משימות במקביל בלי שהכול ייתקע
-            try { //השתמשתי בזה כי זה כבד להוריד תמונה ואני לא רוצה שהאפליקציה תקרוס
-                URL url = new URL(stringOutput); //הURL לתמונה
+        new Thread(() -> { //להריץ כמה משימות במקביל בלי שהכול ייתקע
+            try {
+                URL url = new URL(stringOutput);
                 bitmapOutputImage = BitmapFactory.decodeStream(url.openStream()); //מוריד את התמונה ומעביר לפורמט מתאים
 
                 runOnUiThread(() -> { // מה שמוחזר לThread הראשי

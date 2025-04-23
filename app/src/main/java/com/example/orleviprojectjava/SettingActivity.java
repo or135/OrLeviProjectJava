@@ -8,6 +8,7 @@ import android.widget.RadioButton;
 public class SettingActivity extends ReturnActivity {
 
     private RadioButton radioButtonLight, radioButtonDark;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -15,6 +16,17 @@ public class SettingActivity extends ReturnActivity {
 
         radioButtonLight = findViewById(R.id.radioButtonLight);
         radioButtonDark = findViewById(R.id.radioButtonDark);
+
+        String currentTheme = getIntent().getStringExtra("current_theme");
+        if (currentTheme != null) {
+            if (currentTheme.equals("dark")) {
+                radioButtonDark.setChecked(true);
+                radioButtonLight.setChecked(false);
+            } else {
+                radioButtonLight.setChecked(true);
+                radioButtonDark.setChecked(false);
+            }
+        }
 
         radioButtonLight.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -38,5 +50,4 @@ public class SettingActivity extends ReturnActivity {
             }
         });
     }
-
 }

@@ -10,7 +10,6 @@ import java.util.Locale;
 public class SettingActivity extends ReturnActivity {
 
     private RadioButton radioButtonLight, radioButtonDark;
-
     private TextToSpeech tts;
 
     @Override

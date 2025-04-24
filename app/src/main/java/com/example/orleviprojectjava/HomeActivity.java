@@ -37,11 +37,7 @@ public class HomeActivity extends AppCompatActivity {
                         if (result.getResultCode() == RESULT_OK) {
                             Intent intent = result.getData();
                             String theme = intent.getStringExtra("theme");
-
-                            // Save theme to SharedPreferences
                             saveTheme(theme);
-
-                            // Apply theme
                             applyTheme(theme);
                         }
                     }
@@ -50,7 +46,6 @@ public class HomeActivity extends AppCompatActivity {
     }
 
     private String getSavedTheme() {
-        // Default to light theme if no theme is saved
         return sharedPreferences.getString(THEME_KEY, "light");
     }
 
@@ -70,7 +65,6 @@ public class HomeActivity extends AppCompatActivity {
 
     public void Setting(View view) {
         Intent intent = new Intent(this, SettingActivity.class);
-        // Pass current theme to SettingActivity
         intent.putExtra("current_theme", getSavedTheme());
         launcher.launch(intent);
     }

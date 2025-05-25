@@ -1,0 +1,820 @@
+<html><body> 
+<h2></h2> 
+<h2>AuthManager.java</h2> 
+<pre> 
+package com.example.orleviprojectjava; 
+import com.google.android.gms.tasks.OnCompleteListener; 
+import com.google.firebase.auth.AuthResult; 
+import com.google.firebase.auth.FirebaseAuth; 
+import com.google.firebase.database.FirebaseDatabase; 
+import com.google.firebase.database.DatabaseReference; 
+import java.util.HashMap; 
+import java.util.Map; 
+public class AuthManager { 
+    private FirebaseAuth auth; 
+    private FirebaseDatabase database; 
+    private DatabaseReference usersRef; 
+    public AuthManager() { // מאתחל ומגדיר הפניה לענף 
+        auth = FirebaseAuth.getInstance(); 
+        database = FirebaseDatabase.getInstance(); 
+        usersRef = database.getReference("users"); 
+    } 
+    //listener – אובייקט שאחראי לטפל בתוצאה של הפעולה (למשל, כדי לדעת אם ההרשמה הצליחה או נכשלה) 
+    public void registerUser(String email, String password, OnCompleteListener^<AuthResult^> listener) { 
+        auth.createUserWithEmailAndPassword(email, password) 
+                .addOnCompleteListener(task -^> { 
+                    if (task.isSuccessful() && task.getResult() = null) { 
+                        String userId = task.getResult().getUser().getUid(); 
+                        Map^<String, Object^> newUser = new HashMap^<^>(); //newUser מגירה של 
+                        newUser.put("userId", userId); 
+                        newUser.put("email", email); 
+                        newUser.put("numberOfLikes", 0); 
+                        newUser.put("numberOfPhotos", 0); 
+                        newUser.put("premium", false); 
+                        usersRef.child(userId).setValue(newUser); 
+                    } 
+                    listener.onComplete(task); 
+                }); 
+    } 
+    public void loginUser(String email, String password, OnCompleteListener^<AuthResult^> listener) { 
+        auth.signInWithEmailAndPassword(email, password).addOnCompleteListener(listener); 
+    } 
+    public String getCurrentUserId() { 
+        if (auth.getCurrentUser() = null) { 
+            return auth.getCurrentUser().getUid(); 
+        } 
+        return null; 
+    } 
+} 
+</pre> 
+<h2></h2> 
+<h2>CommentManager.java</h2> 
+<pre> 
+package com.example.orleviprojectjava; 
+import android.content.Context; 
+import android.widget.EditText; 
+import android.widget.Toast; 
+import com.google.firebase.database.DatabaseReference; 
+public class CommentManager { 
+    private final Context context; 
+    private final DatabaseReference databaseRef; 
+    private final AuthManager authManager; 
+    private final EditText commentEditText; 
+    public CommentManager(Context context, DatabaseReference databaseRef, AuthManager authManager, EditText commentEditText) { 
+        this.context = context; 
+        this.databaseRef = databaseRef; 
+        this.authManager = authManager; 
+        this.commentEditText = commentEditText; 
+    } 
+    public void checkPremiumAndUploadComment(ImageData currentImage) { 
+        if (currentImage == null) { 
+            Toast.makeText(context, "No image selected", Toast.LENGTH_SHORT).show(); 
+            return; 
+        } 
+        String userId = authManager.getCurrentUserId(); 
+        // dataSnapshot מכיל את המידע של המשתמש המבוקש 
+        databaseRef.child("users").child(userId).get().addOnSuccessListener(dataSnapshot -^> { 
+            if (dataSnapshot.exists()) { 
+                // לוקח את הערכים בשביל לבדוק אם פרימיום 
+                Boolean isPremium = dataSnapshot.child("premium").getValue(Boolean.class); 
+                Long photoCount = dataSnapshot.child("numberOfPhotos").getValue(Long.class); 
+                // בודק 
+                boolean userIsPremium = (isPremium = null && photoCount ^>= 3); 
+                if (userIsPremium) { 
+                    uploadNewComment(currentImage); //קורא לפעולה שבאמת מעלה את התגובה 
+                    // בודק אם צריך לעדכן את הערך פרימיום 
+                    if ((isPremium == null || = null && photoCount ^>= 3) { 
+                        dataSnapshot.getRef().child("premium").setValue(true); 
+                    } 
+                } 
+                else { 
+                    Toast.makeText(context, "You need to upload at least 3 images to become a premium user and comment on photos", Toast.LENGTH_LONG).show(); 
+                } 
+            } 
+        }).addOnFailureListener(e -^> { 
+            Toast.makeText(context, "Failed to check premium status: " + e.getMessage(), Toast.LENGTH_SHORT).show(); 
+        }); 
+    } 
+    private void uploadNewComment(ImageData currentImage) { 
+        String comment = commentEditText.getText().toString().trim(); 
+        if (comment.isEmpty()) { 
+            Toast.makeText(context, "Please enter a comment", Toast.LENGTH_SHORT).show(); 
+            return; 
+        } 
+        databaseRef.child("images").child(currentImage.getUserId()).child(currentImage.getImageId()).child("lastComment").setValue(comment) 
+                .addOnSuccessListener(aVoid -^> { //aVoid פשוט מתחיל את הפולה לא מכיל מידע 
+                    Toast.makeText(context, "Comment uploaded successfully", Toast.LENGTH_SHORT).show(); 
+                    commentEditText.setText(""); 
+                }) 
+                .addOnFailureListener(e -^> // e מתחיל את הפעולה ומכיל את המידע של השגיאה 
+                        Toast.makeText(context, "Failed to upload comment: " + e.getMessage(), Toast.LENGTH_SHORT).show()); 
+    } 
+} 
+</pre> 
+<h2></h2> 
+<h2>CreatePictureActivity.java</h2> 
+<pre> 
+package com.example.orleviprojectjava; 
+import android.os.Bundle; 
+import android.graphics.Bitmap; 
+import android.graphics.BitmapFactory; 
+import android.util.Base64; 
+import android.view.View; 
+import android.widget.Button; 
+import android.widget.EditText; 
+import android.widget.ImageView; 
+import android.widget.TextView; 
+import java.io.ByteArrayOutputStream; 
+import com.android.volley.AuthFailureError; 
+import com.android.volley.DefaultRetryPolicy; 
+import com.android.volley.Request; 
+import com.android.volley.RetryPolicy; 
+import com.android.volley.toolbox.JsonObjectRequest; 
+import com.android.volley.toolbox.Volley; 
+import com.google.firebase.database.DatabaseReference; 
+import com.google.firebase.database.FirebaseDatabase; 
+import org.json.JSONException; 
+import org.json.JSONObject; 
+import java.net.URL; 
+import java.util.HashMap; 
+import java.util.Map; 
+import java.util.UUID; 
+public class CreatePictureActivity extends ReturnActivity implements View.OnClickListener { 
+    private ImageView imageView; 
+    private EditText editText; 
+    private TextView textView; 
+    private final String stringURL = "https://api.openai.com/v1/images/generations"; 
+    private final String stringAPIKey = "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"; 
+    private String stringOutput = " "; 
+    private Bitmap bitmapOutputImage; 
+    private DatabaseReference databaseRef; 
+    private AuthManager authManager; 
+    private final int INT_TIME_OUT_PERIOD = 60000; 
+    private Button buttonShare; 
+    @Override 
+    protected void onCreate(Bundle savedInstanceState) { 
+        super.onCreate(savedInstanceState); 
+        setContentView(R.layout.activity_create_picture); 
+        imageView = findViewById(R.id.imageView); 
+        editText = findViewById(R.id.editText); 
+        textView = findViewById(R.id.textView); 
+        buttonShare = findViewById(R.id.buttonShare); 
+        databaseRef = FirebaseDatabase.getInstance().getReference(); 
+        authManager = new AuthManager(); 
+        buttonShare.setOnClickListener(this); 
+    } 
+    @Override 
+    public void onClick(View v) { 
+        CustomDialog customDialog = new CustomDialog(this, v); 
+        customDialog.show(); 
+    } 
+    public void buttonGenerateAIImage(View view) { 
+        String stringInputText = editText.getText().toString().trim(); 
+        textView.setText("In process..."); 
+        if (stringInputText.isEmpty()) { 
+            textView.setText("Prompt cannot be empty"); return; 
+        } 
+        // JSON פורמט טקסט פשוט לתקשורת בין אפליקציות 
+        JSONObject jsonObject = new JSONObject(); // פורמט  OpenAI דרוש 
+        try { 
+            jsonObject.put("prompt", stringInputText); 
+            jsonObject.put("n", 1); 
+            jsonObject.put("size", "1024x1024"); 
+        } catch (JSONException e) { 
+            textView.setText("Error creating JSON body"); return; 
+        } 
+        JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(Request.Method.POST, stringURL, jsonObject, //הבקשה עצמה לשרת // סוג הבקשה (POST) 
+                response -^> { 
+                    try { 
+                        stringOutput = response.getJSONArray("data").getJSONObject(0).getString("url"); // הוצאת כתובת ה-URL של התמונה 
+                        textView.setText("Image URL ready"); 
+                    } catch (JSONException e) { 
+                        textView.setText("Error parsing response"); 
+                    } 
+                }, 
+                error -^> { 
+                    textView.setText("API request failed: " + error.getMessage()); 
+                }) { 
+            @Override //getHeaders() מוסיף כותרות לבקשת HTTP // עוטף את המידע 
+            public Map^<String, String^> getHeaders() throws AuthFailureError { 
+                Map^<String, String^> headers = new HashMap^<^>(); 
+                headers.put("Authorization", "Bearer " + stringAPIKey); 
+                headers.put("Content-Type", "application/json"); //סוג הנתונים שאני שולח לשרת 
+                return headers; 
+            } 
+        }; 
+        RetryPolicy retryPolicy = new DefaultRetryPolicy(INT_TIME_OUT_PERIOD, DefaultRetryPolicy.DEFAULT_MAX_RETRIES, DefaultRetryPolicy.DEFAULT_BACKOFF_MULT); 
+        jsonObjectRequest.setRetryPolicy(retryPolicy); // מדיניות בקשה 
+        Volley.newRequestQueue(getApplicationContext()).add(jsonObjectRequest); //תור בקשות 
+    } 
+    public void buttonShowImage(View view) { 
+        buttonShare.setClickable(true); 
+        textView.setText("Downloading image..."); 
+        new Thread(() -^> { //להריץ כמה משימות במקביל בלי שהכול ייתקע 
+            try { 
+                URL url = new URL(stringOutput); 
+                bitmapOutputImage = BitmapFactory.decodeStream(url.openStream()); //מוריד את התמונה ומעביר לפורמט מתאים 
+                runOnUiThread(() -^> { // מה שמוחזר לThread הראשי 
+                    Bitmap bitmapFinalImage = Bitmap.createScaledBitmap(bitmapOutputImage, imageView.getWidth(), imageView.getHeight(), true); 
+                    imageView.setImageBitmap(bitmapFinalImage); 
+                    textView.setText("Image generation successful"); 
+                }); 
+            } catch (Exception e) { 
+                runOnUiThread(() -^> textView.setText("Error downloading image")); 
+            } 
+        }).start(); 
+    } 
+    public void buttonShareImage(View contextView) { 
+        buttonShare.setClickable(false); 
+        if (bitmapOutputImage == null) { 
+            textView.setText("Please generate and show an image first"); return; 
+        } 
+        String userId = authManager.getCurrentUserId(); 
+        textView.setText("Saving image..."); 
+        ByteArrayOutputStream baos = new ByteArrayOutputStream(); //ממיר את התמונה לפורמט שהפיירבייס יכול לשמור 
+        bitmapOutputImage.compress(Bitmap.CompressFormat.JPEG, 50, baos); 
+        byte[] imageData = baos.toByteArray(); 
+        String base64Image = Base64.encodeToString(imageData, Base64.DEFAULT); 
+        String imageId = UUID.randomUUID().toString(); 
+        Map^<String, Object^> imageMap = new HashMap^<^>(); // יוצר את האובייקט של התמונה 
+        imageMap.put("imageId", imageId); 
+        imageMap.put("userId", userId); 
+        imageMap.put("prompt", editText.getText().toString()); 
+        imageMap.put("imageData", base64Image); 
+        imageMap.put("timestamp", System.currentTimeMillis()); 
+        imageMap.put("likes", 0); 
+        databaseRef.child("images").child(userId).child(imageId).setValue(imageMap) 
+                .addOnSuccessListener(aVoid -^> { 
+                    updateUserPhotoCount(userId); 
+                    textView.setText("Image saved successfully"); 
+                }) 
+                .addOnFailureListener(e -^> 
+                        textView.setText("Failed to save image: " + e.getMessage()) 
+                ); 
+    } 
+    private void updateUserPhotoCount(String userId) { 
+        databaseRef.child("users").child(userId).get() 
+                .addOnSuccessListener(dataSnapshot -^> { 
+                    if (dataSnapshot.exists()) { 
+                        Long currentPhotoCount = dataSnapshot.child("numberOfPhotos").getValue(Long.class); 
+                        int newPhotoCount = 0; 
+                        if (currentPhotoCount = null) { newPhotoCount =  currentPhotoCount.intValue() + 1;} 
+                        dataSnapshot.getRef().child("numberOfPhotos").setValue(newPhotoCount); 
+                        if (newPhotoCount ^>= 3) { 
+                            dataSnapshot.getRef().child("premium").setValue(true); 
+                            textView.setText("Image saved"); 
+                        } 
+                    }}) 
+                .addOnFailureListener(e -^> 
+                        textView.setText("Failed to update photo count: " + e.getMessage()) 
+                ); 
+    } 
+} 
+</pre> 
+<h2></h2> 
+<h2>CustomDialog.java</h2> 
+<pre> 
+package com.example.orleviprojectjava; 
+import android.app.Dialog; 
+import android.content.Context; 
+import android.view.View; 
+import android.widget.Button; 
+public class CustomDialog extends Dialog implements View.OnClickListener { 
+    private Button btnYes, btnNo; 
+    private Context context; 
+    private View contextView; 
+    public CustomDialog(Context context, View contextView) { 
+        super(context); 
+        this.context = context; 
+        this.contextView = contextView; 
+        setContentView(R.layout.activity_custom_dialog); 
+        btnYes = findViewById(R.id.btnYes); 
+        btnNo = findViewById(R.id.btnNo); 
+        btnYes.setOnClickListener(this); 
+        btnNo.setOnClickListener(this); 
+    } 
+    @Override 
+    public void onClick(View view) { 
+        if (btnYes == view) { 
+            ((CreatePictureActivity) context).buttonShareImage(contextView); 
+            super.dismiss(); 
+        } else if (btnNo == view) { 
+            ((CreatePictureActivity) context).finish(); 
+        } 
+    } 
+} 
+</pre> 
+<h2></h2> 
+<h2>GalleryActivity.java</h2> 
+<pre> 
+package com.example.orleviprojectjava; 
+import android.graphics.Bitmap; 
+import android.graphics.BitmapFactory; 
+import android.os.Bundle; 
+import android.util.Base64; 
+import android.widget.EditText; 
+import android.widget.ImageButton; 
+import android.widget.ImageView; 
+import android.widget.TextView; 
+import android.widget.Toast; 
+import com.google.firebase.database.DataSnapshot; 
+import com.google.firebase.database.DatabaseError; 
+import com.google.firebase.database.DatabaseReference; 
+import com.google.firebase.database.FirebaseDatabase; 
+import com.google.firebase.database.ValueEventListener; 
+import java.util.ArrayList; 
+import java.util.List; 
+public class GalleryActivity extends ReturnActivity { 
+    private ImageView imageViewGallery, nextImage, uploadComment; 
+    private TextView userNameImage, lastComment, NumLikesG; 
+    private EditText newComment; 
+    private ImageButton imageLike; 
+    private DatabaseReference databaseRef; 
+    private List^<ImageData^> imageList; 
+    private int currentImageIndex = 0; 
+    private AuthManager authManager; 
+    private CommentManager commentManager; 
+    @Override 
+    protected void onCreate(Bundle savedInstanceState) { 
+        super.onCreate(savedInstanceState); 
+        setContentView(R.layout.activity_gallery); 
+        imageViewGallery = findViewById(R.id.imageViewGallery); 
+        userNameImage = findViewById(R.id.UserNameImage); 
+        lastComment = findViewById(R.id.LastComment); 
+        newComment = findViewById(R.id.NewComment); 
+        nextImage = findViewById(R.id.NextImage); 
+        uploadComment = findViewById(R.id.UploadComment); 
+        imageLike = findViewById(R.id.imageLike); 
+        NumLikesG = findViewById(R.id.NumLikesG); 
+        databaseRef = FirebaseDatabase.getInstance().getReference(); 
+        authManager = new AuthManager(); 
+        imageList = new ArrayList^<^>(); 
+        commentManager = new CommentManager(this, databaseRef, authManager, newComment); 
+        loadImages(); 
+        nextImage.setOnClickListener(v -^> showNextImage()); 
+        uploadComment.setOnClickListener(v -^> { 
+            if (imageList.isEmpty()) { 
+                ImageData currentImage = imageList.get(currentImageIndex); 
+                commentManager.checkPremiumAndUploadComment(currentImage); 
+            } else { 
+                Toast.makeText(this, "No images available", Toast.LENGTH_SHORT).show(); 
+            } 
+        }); 
+        imageLike.setOnClickListener(v -^> { 
+            if (imageList.isEmpty()) { 
+                addLike(); 
+            } else { 
+                Toast.makeText(this, "No images available", Toast.LENGTH_SHORT).show(); 
+            } 
+        }); 
+    } 
+    private void loadImages() { 
+        databaseRef.child("images").addValueEventListener(new ValueEventListener() { 
+            @Override 
+            public void onDataChange(DataSnapshot dataSnapshot) { 
+                imageList.clear(); 
+                for (DataSnapshot userSnapshot : dataSnapshot.getChildren()) { 
+                    for (DataSnapshot imageSnapshot : userSnapshot.getChildren()) { 
+                        String imageId = imageSnapshot.child("imageId").getValue(String.class); 
+                        String userId = imageSnapshot.child("userId").getValue(String.class); 
+                        String imageBase64 = imageSnapshot.child("imageData").getValue(String.class); 
+                        String lastCommentText = imageSnapshot.child("lastComment").getValue(String.class); 
+                        Long likes = imageSnapshot.child("likes").getValue(Long.class); 
+                        databaseRef.child("users").child(userId).get().addOnSuccessListener(userDataSnapshot -^> { 
+                            String userEmail = userDataSnapshot.child("email").getValue(String.class); 
+                            ImageData imageData = new ImageData(imageId, userId, imageBase64, userEmail, lastCommentText); 
+                            if (likes = null) {imageData.setLikes(likes);} 
+                            imageList.add(imageData); 
+                            if (imageList.size() == 1) {showCurrentImage();} 
+                        }); 
+                    } 
+                } 
+            } 
+            @Override 
+            public void onCancelled(DatabaseError databaseError) { 
+                Toast.makeText(GalleryActivity.this, "Failed to load images: " + databaseError.getMessage(), Toast.LENGTH_SHORT).show(); 
+            } 
+        }); 
+    } 
+    private void showCurrentImage() { 
+        if (imageList.isEmpty()) { 
+            Toast.makeText(this, "No images available", Toast.LENGTH_SHORT).show();return; 
+        } 
+        ImageData currentImage = imageList.get(currentImageIndex); 
+        byte[] decodedString = Base64.decode(currentImage.getImageBase64(), Base64.DEFAULT); // המרת התמונה מטקסט לתמונה 
+        Bitmap decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length); 
+        imageViewGallery.setImageBitmap(decodedByte); 
+        userNameImage.setText(currentImage.getUserEmail()); 
+        if (currentImage.getLastCommentText() = null) {lastComment.setText(currentImage.getLastCommentText());} 
+        else {lastComment.setText("No comments yet");} 
+        NumLikesG.setText(String.valueOf(currentImage.getLikes())); 
+    } 
+    private void showNextImage() { 
+        if (imageList.isEmpty()) return; 
+        currentImageIndex = (currentImageIndex + 1) % imageList.size(); 
+        showCurrentImage(); 
+    } 
+    // פונקציה פשוטה להוספת לייק 
+    private void addLike() { 
+        ImageData currentImage = imageList.get(currentImageIndex); 
+        String imageId = currentImage.getImageId(); 
+        String imageOwnerId = currentImage.getUserId(); 
+        // עדכון מספר הלייקים של התמונה 
+        DatabaseReference imageRef = databaseRef.child("images").child(imageOwnerId).child(imageId).child("likes"); 
+        imageRef.get().addOnSuccessListener(dataSnapshot -^> { 
+            long currentLikes = 0; 
+            if (dataSnapshot.exists()) { 
+                Long value = dataSnapshot.getValue(Long.class); 
+                if (value = null) {currentLikes = value;} 
+            } 
+            long newLikes = currentLikes + 1; 
+            imageRef.setValue(newLikes); 
+            // עדכון ממשק המשתמש 
+            currentImage.setLikes(newLikes); 
+            NumLikesG.setText(String.valueOf(newLikes)); 
+            // עדכון מספר הלייקים של בעל התמונה 
+            updateUserLikes(imageOwnerId); 
+        }); 
+    } 
+    // עדכון סך הלייקים של המשתמש 
+    private void updateUserLikes(String userId) { 
+        DatabaseReference userRef = databaseRef.child("users").child(userId).child("numberOfLikes"); 
+        userRef.get().addOnSuccessListener(dataSnapshot -^> { 
+            long currentLikes = 0; 
+            if (dataSnapshot.exists()) { 
+                Long value = dataSnapshot.getValue(Long.class); 
+                if (value = null) {currentLikes = value;} 
+            } 
+            userRef.setValue(currentLikes + 1); 
+        }); 
+    } 
+} 
+</pre> 
+<h2></h2> 
+<h2>HomeActivity.java</h2> 
+<pre> 
+package com.example.orleviprojectjava; 
+import androidx.activity.result.ActivityResult; 
+import androidx.activity.result.ActivityResultCallback; 
+import androidx.activity.result.ActivityResultLauncher; 
+import androidx.activity.result.contract.ActivityResultContracts; 
+import androidx.appcompat.app.AppCompatActivity; 
+import androidx.appcompat.app.AppCompatDelegate; 
+import android.content.Intent; 
+import android.content.SharedPreferences; 
+import android.graphics.Color; 
+import android.os.Bundle; 
+import android.view.View; 
+import android.widget.Button; 
+public class HomeActivity extends AppCompatActivity { 
+    private ActivityResultLauncher^<Intent^> launcher; 
+    private View activityHome; 
+    private SharedPreferences sharedPreferences; 
+    private static final String THEME_PREFERENCES = "ThemePreferences"; 
+    private static final String THEME_KEY = "theme"; 
+    @Override 
+    protected void onCreate(Bundle savedInstanceState) { 
+        super.onCreate(savedInstanceState); 
+        sharedPreferences = getSharedPreferences(THEME_PREFERENCES, MODE_PRIVATE); 
+        setContentView(R.layout.activity_home); 
+        activityHome = findViewById(R.id.activityHome); 
+        applyTheme(getSavedTheme()); 
+        launcher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), new ActivityResultCallback^<ActivityResult^>() { 
+                    @Override 
+                    public void onActivityResult(ActivityResult result) { 
+                        if (result.getResultCode() == RESULT_OK) { 
+                            Intent intent = result.getData(); 
+                            String theme = intent.getStringExtra("theme"); 
+                            saveTheme(theme); 
+                            applyTheme(theme); 
+                        } 
+                    } 
+                } 
+        ); 
+    } 
+    private String getSavedTheme() { 
+        return sharedPreferences.getString(THEME_KEY, "light"); 
+    } 
+    private void saveTheme(String theme) { 
+        SharedPreferences.Editor editor = sharedPreferences.edit(); 
+        editor.putString(THEME_KEY, theme); 
+        editor.apply(); 
+    } 
+    private void applyTheme(String theme) { 
+        if (theme.equals("dark")) { 
+            activityHome.setBackgroundColor(Color.BLACK); 
+        } else { 
+            activityHome.setBackgroundColor(Color.WHITE); 
+        } 
+    } 
+    public void Setting(View view) { 
+        Intent intent = new Intent(this, SettingActivity.class); 
+        intent.putExtra("current_theme", getSavedTheme()); 
+        launcher.launch(intent); 
+    } 
+    public void Profile(View view) { 
+        Intent intent = new Intent(this, ProfileActivity.class); 
+        startActivity(intent); 
+    } 
+    public void Create(View view) { 
+        Intent intent = new Intent(this, CreatePictureActivity.class); 
+        startActivity(intent); 
+    } 
+    public void Gallery(View view) { 
+        Intent intent = new Intent(this, GalleryActivity.class); 
+        startActivity(intent); 
+    } 
+} 
+</pre> 
+<h2></h2> 
+<h2>ImageData.java</h2> 
+<pre> 
+package com.example.orleviprojectjava; 
+public class ImageData { 
+    private String imageId, userId, imageBase64, userEmail,lastCommentText; 
+    private long likes; 
+    public ImageData() { 
+        // Default constructor (required for Firebase) 
+    } 
+    public ImageData(String imageId, String userId, String imageBase64, String userEmail, String lastCommentText) { 
+        this.imageId = imageId; 
+        this.userId = userId; 
+        this.imageBase64 = imageBase64; 
+        this.userEmail = userEmail; 
+        this.lastCommentText = lastCommentText; 
+        this.likes = 0; 
+    } 
+    public String getImageId() { 
+        return imageId; 
+    } 
+    public void setImageId(String imageId) { 
+        this.imageId = imageId; 
+    } 
+    public String getUserId() { 
+        return userId; 
+    } 
+    public void setUserId(String userId) { 
+        this.userId = userId; 
+    } 
+    public String getImageBase64() { 
+        return imageBase64; 
+    } 
+    public void setImageBase64(String imageBase64) { 
+        this.imageBase64 = imageBase64; 
+    } 
+    public String getUserEmail() { 
+        return userEmail; 
+    } 
+    public void setUserEmail(String userEmail) { 
+        this.userEmail = userEmail; 
+    } 
+    public String getLastCommentText() { 
+        return lastCommentText; 
+    } 
+    public void setLastCommentText(String lastCommentText) { 
+        this.lastCommentText = lastCommentText; 
+    } 
+    public long getLikes() { 
+        return likes; 
+    } 
+    public void setLikes(long likes) { 
+        this.likes = likes; 
+    } 
+} 
+</pre> 
+<h2></h2> 
+<h2>MainActivity.java</h2> 
+<pre> 
+package com.example.orleviprojectjava; 
+import android.annotation.SuppressLint; 
+import android.content.Intent; 
+import android.os.Bundle; 
+import android.text.TextUtils; 
+import android.view.View; 
+import android.widget.Button; 
+import android.widget.EditText; 
+import android.widget.Toast; 
+import androidx.appcompat.app.AppCompatActivity; 
+import com.google.firebase.auth.FirebaseAuth; 
+import com.google.firebase.auth.FirebaseUser; 
+public class MainActivity extends AppCompatActivity implements View.OnClickListener { 
+    private EditText editTextGmail, editTextPassword; 
+    private Button buttonLogin, buttonSingUp; 
+    private FirebaseAuth mAuth; 
+    AuthManager authManager; 
+    @SuppressLint("MissingInflatedId") 
+    @Override 
+    protected void onCreate(Bundle savedInstanceState) { 
+        super.onCreate(savedInstanceState); 
+        setContentView(R.layout.activity_main); 
+        mAuth = FirebaseAuth.getInstance(); 
+        authManager = new AuthManager(); 
+        editTextGmail = findViewById(R.id.editTextGmail); 
+        editTextPassword = findViewById(R.id.editTextPassword); 
+        buttonLogin = findViewById(R.id.buttonLogin); 
+        buttonLogin.setOnClickListener(this); 
+        buttonSingUp = findViewById(R.id.buttonSignUp); 
+        buttonSingUp.setOnClickListener(this); 
+    } 
+    @Override 
+    public void onClick(View v) { 
+        if (v == buttonSingUp) 
+            registerUser(); 
+        if (v == buttonLogin) 
+            loginUser(); 
+    } 
+    private void loginUser() { 
+        String email = editTextGmail.getText().toString().trim(); 
+        String password = editTextPassword.getText().toString().trim(); 
+        if (TextUtils.isEmpty(email)) { 
+            editTextGmail.setError("Email is required"); 
+            return; 
+        } 
+        if (TextUtils.isEmpty(password)) { 
+            editTextPassword.setError("Password is required"); 
+            return; 
+        } 
+        authManager.loginUser(email, password, task -^> { 
+            if (task.isSuccessful()) { 
+                FirebaseUser user = mAuth.getCurrentUser(); 
+                Toast.makeText(MainActivity.this, "Welcome, " + user.getEmail(), Toast.LENGTH_SHORT).show(); 
+                Intent intent = new Intent(this, HomeActivity.class); 
+                startActivity(intent); 
+                finish(); 
+            } else { 
+                Toast.makeText(MainActivity.this, "Authentication failed.", Toast.LENGTH_SHORT).show(); 
+            } 
+        }); 
+    } 
+    private void registerUser() { 
+        String email = editTextGmail.getText().toString().trim(); 
+        String password = editTextPassword.getText().toString().trim(); 
+        if (TextUtils.isEmpty(email)) { 
+            editTextGmail.setError("Email is required"); 
+            return; 
+        } 
+        if (TextUtils.isEmpty(password)) { 
+            editTextPassword.setError("Password is required"); 
+            return; 
+        } 
+        if(password.length()^<6){ 
+            editTextPassword.setError("Password should be at least 6 characters "); 
+            return; 
+        } 
+        authManager.registerUser(email, password, task -^> { 
+            if (task.isSuccessful()) { 
+                Toast.makeText(this, "Registration successful", Toast.LENGTH_SHORT).show(); 
+                Intent intent = new Intent(this, HomeActivity.class); 
+                startActivity(intent); 
+                finish(); 
+            } else { 
+                Toast.makeText(this, "Registration failed unknown error" , Toast.LENGTH_SHORT).show(); 
+            } 
+        }); 
+    } 
+} 
+</pre> 
+<h2></h2> 
+<h2>ProfileActivity.java</h2> 
+<pre> 
+package com.example.orleviprojectjava; 
+import androidx.annotation.NonNull; 
+import android.os.Bundle; 
+import android.view.View; 
+import android.widget.TextView; 
+import android.widget.Toast; 
+import android.widget.ImageView; 
+import com.google.firebase.auth.FirebaseAuth; 
+import com.google.firebase.auth.FirebaseUser; 
+import com.google.firebase.database.DataSnapshot; 
+import com.google.firebase.database.DatabaseError; 
+import com.google.firebase.database.DatabaseReference; 
+import com.google.firebase.database.FirebaseDatabase; 
+import com.google.firebase.database.ValueEventListener; 
+public class ProfileActivity extends ReturnActivity { 
+    private TextView UserNameProfile, NumImages, NumLikes, premiumStatusText; 
+    private ImageView premiumBadge; 
+    private FirebaseAuth mAuth; 
+    private DatabaseReference mDatabase; 
+    @Override 
+    protected void onCreate(Bundle savedInstanceState) { 
+        super.onCreate(savedInstanceState); 
+        setContentView(R.layout.activity_profile); 
+        mAuth = FirebaseAuth.getInstance(); 
+        mDatabase = FirebaseDatabase.getInstance().getReference(); 
+        UserNameProfile = findViewById(R.id.UserNameProfile); 
+        NumImages = findViewById(R.id.NumImages); 
+        NumLikes = findViewById(R.id.NumLikes); 
+        premiumStatusText = findViewById(R.id.premiumStatusText); 
+        premiumBadge = findViewById(R.id.premiumBadge); 
+        loadUserData(); 
+    } 
+    private void loadUserData() { 
+        FirebaseUser currentUser = mAuth.getCurrentUser(); 
+        if (currentUser = null) { 
+            UserNameProfile.setText(currentUser.getEmail()); 
+            mDatabase.child("users").child(currentUser.getUid()).addValueEventListener(new ValueEventListener() { 
+                @Override 
+                public void onDataChange(@NonNull DataSnapshot dataSnapshot) { 
+                    if (dataSnapshot.exists()) { 
+                        Long numPhotos = dataSnapshot.child("numberOfPhotos").getValue(Long.class); 
+                        Long numLikes = dataSnapshot.child("numberOfLikes").getValue(Long.class); 
+                        Boolean isPremium = dataSnapshot.child("premium").getValue(Boolean.class); 
+                        NumImages.setText("Photos: " + String.valueOf(numPhotos)); 
+                        NumLikes.setText("Likes: " + String.valueOf(numLikes)); 
+                        boolean userIsPremium = (isPremium = null && numPhotos ^>= 3); 
+                        if (userIsPremium) { 
+                            premiumStatusText.setText("Premium User"); 
+                            premiumBadge.setVisibility(View.VISIBLE); 
+                            if (isPremium == null || isPremium) {dataSnapshot.getRef().child("premium").setValue(true);} 
+                        } 
+                        else 
+                        { 
+                            int photosNeeded = 3 - (numPhotos.intValue()); 
+                            premiumStatusText.setText("Regular User                                (" + photosNeeded + " more photos for premium)"); 
+                            premiumBadge.setVisibility(View.GONE); 
+                        } 
+                    } 
+                } 
+                @Override 
+                public void onCancelled(@NonNull DatabaseError databaseError) { 
+                    Toast.makeText(ProfileActivity.this, "Failed to load user data.", Toast.LENGTH_SHORT).show(); 
+                } 
+            }); 
+        } 
+    } 
+} 
+</pre> 
+<h2></h2> 
+<h2>ReturnActivity.java</h2> 
+<pre> 
+package com.example.orleviprojectjava; 
+import android.view.View; 
+import androidx.appcompat.app.AppCompatActivity; 
+public class ReturnActivity extends AppCompatActivity { 
+    public void ReturnTH(View view) { 
+        finish(); 
+    } 
+} 
+</pre> 
+<h2></h2> 
+<h2>SettingActivity.java</h2> 
+<pre> 
+package com.example.orleviprojectjava; 
+import android.content.Intent; 
+import android.os.Bundle; 
+import android.view.View; 
+import android.widget.RadioButton; 
+import android.speech.tts.TextToSpeech; 
+import java.util.Locale; 
+public class SettingActivity extends ReturnActivity { 
+    private RadioButton radioButtonLight, radioButtonDark; 
+    private TextToSpeech tts; 
+    @Override 
+    protected void onCreate(Bundle savedInstanceState) { 
+        super.onCreate(savedInstanceState); 
+        setContentView(R.layout.activity_setting); 
+        radioButtonLight = findViewById(R.id.radioButtonLight); 
+        radioButtonDark = findViewById(R.id.radioButtonDark); 
+        String currentTheme = getIntent().getStringExtra("current_theme"); 
+        if (currentTheme = null) { 
+            if (currentTheme.equals("dark")) { 
+                radioButtonDark.setChecked(true); 
+                radioButtonLight.setChecked(false); 
+            } else { 
+                radioButtonLight.setChecked(true); 
+                radioButtonDark.setChecked(false); 
+            } 
+        } 
+        tts = new TextToSpeech(this, new TextToSpeech.OnInitListener() { 
+            @Override 
+            public void onInit(int status) { 
+                tts.setLanguage(Locale.US); 
+            } 
+        }); 
+        radioButtonLight.setOnClickListener(new View.OnClickListener() { 
+            @Override 
+            public void onClick(View v) { 
+                radioButtonDark.setChecked(false); 
+                Intent intent = new Intent(); 
+                intent.putExtra("theme", "light"); 
+                tts.speak("light mode", TextToSpeech.QUEUE_FLUSH, null, null); 
+                setResult(RESULT_OK, intent); 
+                finish(); 
+            } 
+        }); 
+        radioButtonDark.setOnClickListener(new View.OnClickListener() { 
+            @Override 
+            public void onClick(View v) { 
+                radioButtonLight.setChecked(false); 
+                Intent intent = new Intent(); 
+                intent.putExtra("theme", "dark"); 
+                tts.speak("dark mode", TextToSpeech.QUEUE_FLUSH, null, null); 
+                setResult(RESULT_OK, intent); 
+                finish(); 
+            } 
+        }); 
+    } 
+} 
+</pre> 
+</body></html> 

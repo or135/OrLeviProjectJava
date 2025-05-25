@@ -31,7 +31,7 @@ public class CreatePictureActivity extends ReturnActivity implements View.OnClic
     private EditText editText;
     private TextView textView;
     private final String stringURL = "https://api.openai.com/v1/images/generations";
-    private final String stringAPIKey = "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";
+    private final String stringAPIKey = "";
     private String stringOutput = " ";
     private Bitmap bitmapOutputImage;
     private DatabaseReference databaseRef;
